@@ -82,7 +82,7 @@ def valuation_agent(state: ResearchState) -> ResearchState:
             HumanMessage(content=f"Ticker: {ticker}\nValuation: {valuation}"),
         ])
 
-        return {**state, "valuation": valuation, "valuation_notes": resp.content.strip(), "errors": errors}
+        return {"valuation": valuation, "valuation_notes": resp.content.strip(), "errors": errors}
     except Exception as e:
         errors.append(f"valuation_agent: {e}")
-        return {**state, "valuation": None, "valuation_notes": None, "errors": errors}
+        return {"valuation": None, "valuation_notes": None, "errors": errors}

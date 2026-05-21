@@ -78,7 +78,6 @@ def filings_agent(state: ResearchState) -> ResearchState:
         financials = json.loads(text)
 
         return {
-            **state,
             "company_name": financials.get("company_name") or info.get("longName"),
             "financials": financials,
             "filing_url": f"https://finance.yahoo.com/quote/{ticker}",
@@ -87,4 +86,4 @@ def filings_agent(state: ResearchState) -> ResearchState:
         }
     except Exception as e:
         errors.append(f"filings_agent: {e}")
-        return {**state, "errors": errors, "financials": None}
+        return {"errors": errors, "financials": None}

@@ -82,7 +82,7 @@ def editor_agent(state: ResearchState) -> ResearchState:
             HumanMessage(content=f"The recommendation is: {rec}\n\nContext:\n```json\n{json.dumps(context, default=str)}\n```\n\nWrite the memo."),
         ])
 
-        return {**state, "memo_markdown": resp.content.strip(), "recommendation": rec, "errors": errors}
+        return {"memo_markdown": resp.content.strip(), "recommendation": rec, "errors": errors}
     except Exception as e:
         errors.append(f"editor_agent: {e}")
-        return {**state, "memo_markdown": None, "recommendation": rec, "errors": errors}
+        return {"memo_markdown": None, "recommendation": rec, "errors": errors}

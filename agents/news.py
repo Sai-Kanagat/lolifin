@@ -45,7 +45,7 @@ def news_agent(state: ResearchState) -> ResearchState:
                 items.append({"title": title, "publisher": publisher, "url": link})
 
         if not items:
-            return {**state, "news_summary": "No recent news available.", "news_sentiment": "neutral", "news_sources": []}
+            return {"news_summary": "No recent news available.", "news_sentiment": "neutral", "news_sources": []}
 
         headlines_text = "\n".join(f"- {it['title']} ({it.get('publisher', 'unknown')})" for it in items)
 
@@ -65,7 +65,6 @@ def news_agent(state: ResearchState) -> ResearchState:
         parsed = json.loads(text)
 
         return {
-            **state,
             "news_summary": parsed.get("summary"),
             "news_sentiment": parsed.get("sentiment"),
             "news_sources": items[:5],
@@ -73,4 +72,4 @@ def news_agent(state: ResearchState) -> ResearchState:
         }
     except Exception as e:
         errors.append(f"news_agent: {e}")
-        return {**state, "news_summary": None, "news_sentiment": "neutral", "news_sources": [], "errors": errors}
+        return {"news_summary": None, "news_sentiment": "neutral", "news_sources": [], "errors": errors}

@@ -60,11 +60,10 @@ def risk_agent(state: ResearchState) -> ResearchState:
         parsed = json.loads(text)
 
         return {
-            **state,
             "risks": parsed.get("risks", []),
             "risk_score": parsed.get("overall_score"),
             "errors": errors,
         }
     except Exception as e:
         errors.append(f"risk_agent: {e}")
-        return {**state, "risks": [], "risk_score": None, "errors": errors}
+        return {"risks": [], "risk_score": None, "errors": errors}
