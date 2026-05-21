@@ -75,12 +75,17 @@ def valuation_agent(state: ResearchState) -> ResearchState:
             },
         }
 
-        llm = get_llm(temperature=0.3)
-        resp = llm.invoke([
-            SystemMessage(content="You are an equity analyst. Write 3-4 sentences interpreting the valuation. Be specific about which method tells what story and what could break the thesis."),
-            HumanMessage(content=f"Ticker: {ticker}\nValuation: {valuation}"),
-        ])
+        notes = "Valuation commentary unavailable."
+        try:
+            llm = get_llm(temperature=0.3)
+            resp = llm.invoke([
+                SystemMessage(content="You are an equity analyst. Write 3-4 sentences in plain prose (no markdown, no headers) interpreting this valuation. Mention which method tells what story and what could break the thesis."),
+                HumanMessage(content=f"Ticker: {ticker}\nValuation: {valuation}"),
+            ])
+            notes = resp.content.strip()
+        except Exception:
+            pass
 
-        return {"valuation": valuation, "valuation_notes": resp.content.strip(), "errors": []}
+        return {"valuation": valuation, "valuation_notes": notes, "errors": []}
     except Exception as e:
-        return {"valuation": None, "valuation_notes": None, "errors": [f"valuation_agent: {e}"]}
+        return {"valuation": None, "valuation_notes": "Valuation calculation failed.", "errors": [f"valuation_agent: {e}"]}

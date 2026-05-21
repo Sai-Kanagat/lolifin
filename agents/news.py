@@ -2,13 +2,10 @@
 News Agent
 ----------
 Pulls recent headlines from Yahoo Finance (via yfinance, no key) and asks the
-LLM to summarize the dominant narratives and overall sentiment.
-
-Why we don't use a paid news API: Yahoo's news feed is good enough for
-30-day equity coverage on most large/mid-caps, and keeping the project
-zero-cost is a hard requirement.
+LLM to label sentiment. Sources are always returned even if the LLM fails.
 """
 import json
+import re
 import yfinance as yf
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -16,14 +13,25 @@ from llm import get_llm
 from state import ResearchState
 
 
-SYSTEM = """You are a financial news analyst. Given recent headlines about a company,
-return ONLY a JSON object with:
-- sentiment: one of "positive", "neutral", "negative"
-- top_narratives: array of 3 short bullet strings describing what's driving the story
-- summary: 2-3 sentence summary of the recent news flow
+def _extract_json(text: str):
+    """Pull a JSON object out of an LLM response, even if wrapped in markdown."""
+    text = text.strip()
+    m = re.search(r"\{.*\}", text, re.DOTALL)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0))
+    except Exception:
+        return None
 
-Be evidence-based. If headlines are mixed, say neutral.
-"""
+
+SYSTEM = (
+    "You are a financial news analyst. Given recent headlines about a company, "
+    "respond with a single JSON object — no markdown, no preamble — with keys: "
+    'sentiment (one of "positive", "neutral", "negative"), '
+    "top_narratives (array of 3 short bullet strings), "
+    "summary (2-3 sentence summary)."
+)
 
 
 def news_agent(state: ResearchState) -> ResearchState:
@@ -33,41 +41,51 @@ def news_agent(state: ResearchState) -> ResearchState:
         tk = yf.Ticker(ticker)
         raw_news = tk.news or []
 
-        # yfinance news shape varies; normalize to title + publisher + link
         items = []
         for n in raw_news[:15]:
             content = n.get("content") or n
             title = content.get("title") or n.get("title")
-            link = content.get("canonicalUrl", {}).get("url") if isinstance(content.get("canonicalUrl"), dict) else n.get("link")
-            publisher = content.get("provider", {}).get("displayName") if isinstance(content.get("provider"), dict) else n.get("publisher")
+            cu = content.get("canonicalUrl")
+            link = (cu.get("url") if isinstance(cu, dict) else None) or n.get("link")
+            prov = content.get("provider")
+            publisher = (prov.get("displayName") if isinstance(prov, dict) else None) or n.get("publisher")
             if title:
                 items.append({"title": title, "publisher": publisher, "url": link})
 
         if not items:
-            return {"news_summary": "No recent news available.", "news_sentiment": "neutral", "news_sources": []}
+            return {
+                "news_summary": "No recent news available for this ticker.",
+                "news_sentiment": "neutral",
+                "news_sources": [],
+                "errors": [],
+            }
 
-        headlines_text = "\n".join(f"- {it['title']} ({it.get('publisher', 'unknown')})" for it in items)
+        headlines = "\n".join(f"- {it['title']} ({it.get('publisher') or 'unknown'})" for it in items)
 
-        llm = get_llm(temperature=0.2)
-        resp = llm.invoke([
-            SystemMessage(content=SYSTEM),
-            HumanMessage(content=f"Ticker: {ticker}\n\nRecent headlines:\n{headlines_text}\n\nReturn JSON."),
-        ])
-
-        text = resp.content.strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
-
-        parsed = json.loads(text)
+        # LLM is best-effort. If parsing fails we still return the headlines.
+        try:
+            llm = get_llm(temperature=0.2)
+            resp = llm.invoke([
+                SystemMessage(content=SYSTEM),
+                HumanMessage(content=f"Ticker: {ticker}\n\nHeadlines:\n{headlines}"),
+            ])
+            parsed = _extract_json(resp.content) or {}
+            sentiment = parsed.get("sentiment") or "neutral"
+            summary = parsed.get("summary") or "Recent headlines summarized below."
+        except Exception:
+            sentiment = "neutral"
+            summary = "Recent headlines summarized below (LLM unavailable)."
 
         return {
-            "news_summary": parsed.get("summary"),
-            "news_sentiment": parsed.get("sentiment"),
-            "news_sources": items[:5],
+            "news_summary": summary,
+            "news_sentiment": sentiment,
+            "news_sources": items[:6],
             "errors": [],
         }
     except Exception as e:
-        return {"news_summary": None, "news_sentiment": "neutral", "news_sources": [], "errors": [f"news_agent: {e}"]}
+        return {
+            "news_summary": "News pull failed.",
+            "news_sentiment": "neutral",
+            "news_sources": [],
+            "errors": [f"news_agent: {e}"],
+        }

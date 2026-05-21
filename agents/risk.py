@@ -1,34 +1,65 @@
 """
 Risk Agent
 ----------
-Scans the filings + news context for red flags. Outputs a structured risk
-list and an overall 1-10 score.
-
-This agent demonstrates *cross-agent reasoning*: it uses outputs from both
-filings_agent and news_agent — none of which it pulled itself. That's a
-core agentic-system property (shared state, downstream consumption).
+Cross-references filings + news + valuation outputs and extracts risk flags.
 """
 import json
+import re
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from llm import get_llm
 from state import ResearchState
 
 
-SYSTEM = """You are a credit/risk analyst. Identify red flags from the data given.
-Return ONLY JSON:
-{
-  "risks": [
-    {"risk": "short description", "severity": "low|medium|high", "source": "filings|news|valuation"}
-  ],
-  "overall_score": 1-10 (1 = very safe, 10 = avoid)
-}
+def _extract_json(text: str):
+    m = re.search(r"\{.*\}", text.strip(), re.DOTALL)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0))
+    except Exception:
+        return None
 
-Look for: declining margins, leverage, negative FCF, slowing growth, regulatory news,
-management changes, accounting concerns, customer concentration, macro exposure.
 
-Always return at least 3 risks. Be honest, not alarmist.
-"""
+SYSTEM = (
+    "You are a credit and equity risk analyst. From the data provided, identify "
+    "the top risks. Respond with a single JSON object (no markdown, no preamble) "
+    "with keys: "
+    'risks (array of objects each with "risk" (short description), '
+    '"severity" (one of "low","medium","high"), and "source" (one of '
+    '"filings","news","valuation","macro")), '
+    "and overall_score (integer 1-10 where 1=very safe, 10=avoid). "
+    "Always return at least 3 risks. Be evidence-based, not alarmist."
+)
+
+
+def _fallback_risks(state: ResearchState):
+    """Deterministic fallback when the LLM is unavailable."""
+    risks = []
+    fins = state.get("financials") or {}
+    val = state.get("valuation") or {}
+
+    if fins.get("revenue_growth_yoy") is not None and fins["revenue_growth_yoy"] < 0:
+        risks.append({"risk": "Revenue declining year-over-year", "severity": "high", "source": "filings"})
+    if fins.get("operating_margin") is not None and fins["operating_margin"] < 0.05:
+        risks.append({"risk": "Thin or negative operating margins", "severity": "high", "source": "filings"})
+    if fins.get("free_cash_flow_ttm") is not None and fins["free_cash_flow_ttm"] < 0:
+        risks.append({"risk": "Negative free cash flow", "severity": "high", "source": "filings"})
+    if fins.get("total_debt") and fins.get("cash") and fins["total_debt"] > 3 * (fins["cash"] or 1):
+        risks.append({"risk": "Debt materially exceeds cash on balance sheet", "severity": "medium", "source": "filings"})
+    if val.get("upside_pct") is not None and val["upside_pct"] < -10:
+        risks.append({"risk": "Stock trades meaningfully above blended fair value", "severity": "medium", "source": "valuation"})
+    if state.get("news_sentiment") == "negative":
+        risks.append({"risk": "Negative recent news sentiment", "severity": "medium", "source": "news"})
+
+    if not risks:
+        risks = [
+            {"risk": "General market and macroeconomic exposure", "severity": "medium", "source": "macro"},
+            {"risk": "Sector-specific cyclicality", "severity": "medium", "source": "macro"},
+            {"risk": "Execution and management risk inherent to any equity", "severity": "low", "source": "macro"},
+        ]
+
+    return risks, 5
 
 
 def risk_agent(state: ResearchState) -> ResearchState:
@@ -42,25 +73,26 @@ def risk_agent(state: ResearchState) -> ResearchState:
             "valuation": state.get("valuation"),
         }
 
-        llm = get_llm(temperature=0.2)
-        resp = llm.invoke([
-            SystemMessage(content=SYSTEM),
-            HumanMessage(content=f"Analyze this company:\n```json\n{json.dumps(context, default=str)}\n```\n\nReturn JSON."),
-        ])
+        try:
+            llm = get_llm(temperature=0.2)
+            resp = llm.invoke([
+                SystemMessage(content=SYSTEM),
+                HumanMessage(content=f"Data:\n```json\n{json.dumps(context, default=str)}\n```"),
+            ])
+            parsed = _extract_json(resp.content)
+            if parsed and parsed.get("risks"):
+                return {
+                    "risks": parsed.get("risks", []),
+                    "risk_score": parsed.get("overall_score") or 5,
+                    "errors": [],
+                }
+        except Exception:
+            pass
 
-        text = resp.content.strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
+        # Fallback if LLM failed or returned junk
+        risks, score = _fallback_risks(state)
+        return {"risks": risks, "risk_score": score, "errors": []}
 
-        parsed = json.loads(text)
-
-        return {
-            "risks": parsed.get("risks", []),
-            "risk_score": parsed.get("overall_score"),
-            "errors": [],
-        }
     except Exception as e:
-        return {"risks": [], "risk_score": None, "errors": [f"risk_agent: {e}"]}
+        risks, score = _fallback_risks(state)
+        return {"risks": risks, "risk_score": score, "errors": [f"risk_agent: {e}"]}

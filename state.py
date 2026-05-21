@@ -22,6 +22,7 @@ class ResearchState(TypedDict, total=False):
     financials: Optional[dict]
     filing_url: Optional[str]
     filing_date: Optional[str]
+    price_history: Optional[list]   # list of {date, close}
 
     # News agent output
     news_summary: Optional[str]
