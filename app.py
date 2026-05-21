@@ -1,15 +1,20 @@
 """
 LoliFin — Streamlit dashboard.
 
-Editorial Terminal aesthetic: warm cream paper, ink-black serifs,
-JetBrains Mono numbers, coral accent. Per LoliFin design system.
+Editorial Terminal palette (warm cream paper, ink-black, coral accent)
+applied to the dashboard structure that worked: live agent progress at top,
+KPI tiles with 'why?' expanders below them, charts row, two-column body,
+deep-dive tabs, pipeline log + footer at bottom.
 
 Run: streamlit run app.py
 """
+import base64
 import time
+from pathlib import Path
+
+import altair as alt
 import pandas as pd
 import streamlit as st
-import altair as alt
 
 from graph import graph
 
@@ -19,384 +24,349 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Design system CSS ────────────────────────────────────────────────────
+
+# ── Load logo ────────────────────────────────────────────────────────────
+def _load_logo() -> str:
+    p = Path(__file__).parent / "assets" / "logo.svg"
+    if p.exists():
+        b = base64.b64encode(p.read_bytes()).decode()
+        return f"data:image/svg+xml;base64,{b}"
+    return ""
+
+
+LOGO_URI = _load_logo()
+
+
+# ── Design system CSS (ONE st.markdown call, ONE <style> block) ──────────
 st.markdown(
-    """
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-    :root {
-      --paper:        #F2E8DA;
-      --paper-dim:    #EADFCE;
-      --paper-deep:   #E0D2BC;
-      --paper-card:   #FBF6EE;
-      --salmon:       #F4C9A8;
-      --salmon-deep:  #E8B58E;
-      --ink:          #1A1714;
-      --ink-2:        #5C544A;
-      --ink-3:        #8A8175;
-      --rule:         rgba(26, 23, 20, 0.15);
-      --rule-strong:  rgba(26, 23, 20, 0.30);
-      --coral:        #FF5B3C;
-      --coral-soft:   #FFDFD4;
-      --bull:         #1F7A4D;
-      --bull-soft:    #D4E7DC;
-      --bear:         #C2391C;
-      --bear-soft:    #F4D3C9;
-      --highlight:    #F5C842;
-      --terminal:     #0E1410;
-      --terminal-2:   #161E18;
-      --phosphor:     #6FE39A;
-      --serif:   'Instrument Serif', Georgia, serif;
-      --sans:    'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-      --mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
-    }
+    """<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-    /* Base */
-    html, body, .stApp { background: var(--paper) !important; }
-    .stApp { font-family: var(--sans); color: var(--ink); }
-    #MainMenu, footer, header { visibility: hidden; }
-    section[data-testid="stSidebar"] { display: none; }
+:root {
+  --paper: #F2E8DA;
+  --paper-dim: #EADFCE;
+  --paper-deep: #E0D2BC;
+  --paper-card: #FBF6EE;
+  --salmon: #F4C9A8;
+  --ink: #1A1714;
+  --ink-2: #5C544A;
+  --ink-3: #8A8175;
+  --rule: rgba(26,23,20,0.15);
+  --rule-strong: rgba(26,23,20,0.30);
+  --coral: #FF5B3C;
+  --coral-soft: #FFDFD4;
+  --bull: #1F7A4D;
+  --bull-soft: #D4E7DC;
+  --bear: #C2391C;
+  --bear-soft: #F4D3C9;
+  --terminal: #0E1410;
+  --phosphor: #6FE39A;
+  --serif: 'Instrument Serif', Georgia, serif;
+  --sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
 
-    /* Paper grain */
-    .stApp::before {
-        content: ""; position: fixed; inset: 0; pointer-events: none;
-        background-image: radial-gradient(rgba(26,23,20,0.025) 1px, transparent 1px);
-        background-size: 3px 3px; z-index: 0;
-    }
-    .main .block-container { position: relative; z-index: 1; padding-top: 0 !important; }
+html, body, .stApp { background: #F2E8DA !important; }
+.stApp { font-family: var(--sans); color: var(--ink); }
+#MainMenu, footer, header { visibility: hidden; }
+section[data-testid="stSidebar"] { display: none; }
+.main .block-container { padding-top: 0 !important; max-width: 1280px; }
 
-    /* Override Streamlit text */
-    .stApp p, .stApp li, .stApp span, .stApp div,
-    .stMarkdown, .stMarkdown p, .stMarkdown li {
-        color: var(--ink); font-family: var(--sans);
-    }
-    h1, h2, h3, h4, h5, h6,
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        color: var(--ink) !important; font-family: var(--sans);
-        letter-spacing: -0.01em;
-    }
+.stApp p, .stApp li, .stApp span, .stApp div,
+.stMarkdown, .stMarkdown p, .stMarkdown li { color: var(--ink); font-family: var(--sans); }
+h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+  color: var(--ink) !important; font-family: var(--sans); letter-spacing: -0.01em;
+}
 
-    /* Masthead */
-    .masthead {
-        margin: -1rem -1rem 28px -1rem; padding: 16px 32px;
-        background: var(--paper); border-bottom: 1px solid var(--rule-strong);
-        display: flex; align-items: center; justify-content: space-between;
-    }
-    .masthead-left { display: flex; align-items: baseline; gap: 14px; }
-    .wordmark {
-        font-family: var(--serif); font-size: 32px; font-weight: 400;
-        color: var(--ink); letter-spacing: -0.02em; line-height: 1;
-    }
-    .wordmark .accent { color: var(--coral); }
-    .tagline {
-        font-family: var(--sans); font-size: 12px; color: var(--ink-2);
-        text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500;
-    }
-    .masthead-right {
-        font-family: var(--sans); font-size: 12px; color: var(--ink-2);
-        text-align: right; line-height: 1.5;
-    }
-    .masthead-right b { color: var(--ink); font-weight: 600; }
+.masthead {
+  margin: -1rem -1rem 24px -1rem; padding: 20px 32px;
+  background: var(--paper); border-bottom: 1px solid var(--rule-strong);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.masthead img { height: 56px; display: block; }
+.masthead-right {
+  font-family: var(--sans); font-size: 12px; color: var(--ink-2);
+  text-align: right; line-height: 1.55;
+}
+.masthead-right b { color: var(--ink); font-weight: 600; }
+.tagline {
+  font-family: var(--sans); font-size: 11px; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600;
+  margin-top: 4px;
+}
 
-    /* Hero memo header */
-    .memo-hero {
-        margin: 18px 0 8px 0; padding: 24px 0;
-        border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-    }
-    .memo-h-row { display: flex; align-items: flex-start; justify-content: space-between; }
-    .memo-company {
-        font-family: var(--serif); font-size: 48px; line-height: 1.05;
-        color: var(--ink); letter-spacing: -0.02em; font-weight: 400;
-    }
-    .memo-ticker {
-        font-family: var(--mono); font-size: 14px; color: var(--ink-2);
-        font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-        margin-top: 6px;
-    }
-    .memo-meta {
-        font-family: var(--sans); font-size: 13px; color: var(--ink-3);
-        margin-top: 4px;
-    }
+.section {
+  font-family: var(--sans); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2);
+  margin: 28px 0 10px 0; padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+}
 
-    /* Recommendation badge */
-    .rec-badge {
-        font-family: var(--mono); font-weight: 700; font-size: 18px;
-        padding: 10px 18px; letter-spacing: 0.05em; border: 1.5px solid;
-        display: inline-block;
-    }
-    .rec-BUY  { color: var(--bull); border-color: var(--bull);  background: var(--bull-soft); }
-    .rec-HOLD { color: var(--ink);  border-color: var(--ink);   background: var(--paper-card); }
-    .rec-SELL { color: var(--bear); border-color: var(--bear);  background: var(--bear-soft); }
+.tile {
+  background: var(--paper-card); border: 1px solid var(--rule-strong);
+  padding: 14px 16px; min-height: 92px; border-radius: 4px;
+}
+.tile-label {
+  font-family: var(--sans); font-size: 10px; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  margin-bottom: 6px;
+}
+.tile-value {
+  font-family: var(--mono); font-size: 24px; color: var(--ink);
+  font-weight: 500; font-feature-settings: 'tnum' 1; line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.tile-value.bull { color: var(--bull); }
+.tile-value.bear { color: var(--bear); }
+.tile-sub {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  margin-top: 4px; font-feature-settings: 'tnum' 1;
+}
 
-    /* Section headings */
-    .section {
-        font-family: var(--sans); font-size: 11px; font-weight: 700;
-        letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2);
-        margin: 32px 0 12px 0; padding-bottom: 6px;
-        border-bottom: 1px solid var(--rule);
-    }
+.memo-hero {
+  margin: 16px 0 4px 0; padding: 18px 0;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.memo-company {
+  font-family: var(--serif); font-size: 44px; line-height: 1.05;
+  color: var(--ink); letter-spacing: -0.02em; font-weight: 400;
+}
+.memo-ticker {
+  font-family: var(--mono); font-size: 13px; color: var(--ink-2);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  margin-top: 6px;
+}
+.memo-meta {
+  font-family: var(--sans); font-size: 13px; color: var(--ink-3); margin-top: 2px;
+}
 
-    /* KPI / data tiles */
-    .tile {
-        background: var(--paper-card); border: 1px solid var(--rule-strong);
-        padding: 14px 16px; min-height: 90px;
-    }
-    .tile-label {
-        font-family: var(--sans); font-size: 11px; color: var(--ink-2);
-        text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
-        margin-bottom: 6px;
-    }
-    .tile-value {
-        font-family: var(--mono); font-size: 26px; color: var(--ink);
-        font-weight: 500; font-feature-settings: 'tnum' 1;
-        letter-spacing: -0.01em; line-height: 1.1;
-    }
-    .tile-sub {
-        font-family: var(--mono); font-size: 11px; color: var(--ink-3);
-        margin-top: 4px; font-feature-settings: 'tnum' 1;
-    }
-    .tile-value.bull { color: var(--bull); }
-    .tile-value.bear { color: var(--bear); }
+.rec-badge {
+  font-family: var(--mono); font-weight: 700; font-size: 17px;
+  padding: 9px 16px; letter-spacing: 0.05em; border: 1.5px solid;
+  display: inline-block; border-radius: 4px;
+}
+.rec-BUY  { color: var(--bull); border-color: var(--bull);  background: var(--bull-soft); }
+.rec-HOLD { color: var(--ink);  border-color: var(--ink);   background: var(--paper-card); }
+.rec-SELL { color: var(--bear); border-color: var(--bear);  background: var(--bear-soft); }
 
-    /* Body text */
-    .body {
-        font-family: var(--sans); font-size: 15px; line-height: 1.65;
-        color: var(--ink); max-width: 680px;
-    }
-    .body p, .body li { color: var(--ink); }
-    .body strong, .body b { color: var(--ink); font-weight: 600; }
+.body { font-family: var(--sans); font-size: 14.5px; line-height: 1.65; color: var(--ink); }
+.body p, .body li, .body strong, .body b { color: var(--ink); }
 
-    /* Memo prose */
-    .memo-prose {
-        font-family: var(--serif); font-size: 18px; line-height: 1.55;
-        color: var(--ink); max-width: 680px; font-style: italic;
-        padding: 8px 0;
-    }
+.pull-quote {
+  font-family: var(--serif); font-size: 18px; line-height: 1.5;
+  color: var(--ink); padding: 8px 0 8px 18px;
+  border-left: 3px solid var(--coral); max-width: 680px;
+  font-style: italic;
+}
 
-    /* Mono numbers helper */
-    .num { font-family: var(--mono); font-feature-settings: 'tnum' 1; }
-    .bull-text { color: var(--bull); }
-    .bear-text { color: var(--bear); }
+.risk-pill {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 3px 8px; margin-right: 10px; display: inline-block; border: 1px solid;
+}
+.risk-high   { color: var(--bear); border-color: var(--bear); background: var(--bear-soft); }
+.risk-medium { color: var(--ink-2); border-color: var(--ink-2); background: var(--paper-dim); }
+.risk-low    { color: var(--bull); border-color: var(--bull); background: var(--bull-soft); }
+.risk-card {
+  background: var(--paper-card); border: 1px solid var(--rule);
+  padding: 12px 14px; margin-bottom: 8px; border-radius: 4px;
+}
+.risk-text { color: var(--ink); font-size: 14px; }
+.risk-source {
+  color: var(--ink-3); font-family: var(--mono); font-size: 10px;
+  margin-top: 6px; text-transform: uppercase; letter-spacing: 0.06em;
+}
 
-    /* Risk pill */
-    .risk-pill {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 0.08em;
-        padding: 3px 8px; margin-right: 10px; display: inline-block;
-        border: 1px solid;
-    }
-    .risk-high   { color: var(--bear); border-color: var(--bear); background: var(--bear-soft); }
-    .risk-medium { color: var(--ink-2); border-color: var(--ink-2); background: var(--paper-dim); }
-    .risk-low    { color: var(--bull); border-color: var(--bull); background: var(--bull-soft); }
+.sent {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 4px 10px; text-transform: uppercase; letter-spacing: 0.08em;
+  display: inline-block; border: 1px solid; border-radius: 4px;
+}
+.sent-positive { color: var(--bull); border-color: var(--bull); background: var(--bull-soft); }
+.sent-neutral  { color: var(--ink-2); border-color: var(--rule-strong); background: var(--paper-card); }
+.sent-negative { color: var(--bear); border-color: var(--bear); background: var(--bear-soft); }
 
-    .risk-card {
-        background: var(--paper-card); border: 1px solid var(--rule);
-        padding: 12px 14px; margin-bottom: 8px;
-    }
-    .risk-text { color: var(--ink); font-size: 14px; }
-    .risk-source { color: var(--ink-3); font-family: var(--mono);
-                   font-size: 11px; margin-top: 6px; text-transform: uppercase;
-                   letter-spacing: 0.05em; }
+.news-card {
+  background: var(--paper-card); border: 1px solid var(--rule);
+  border-left: 3px solid var(--coral); padding: 12px 14px; margin-bottom: 8px;
+  border-radius: 4px; transition: background 150ms ease;
+}
+.news-card:hover { background: var(--paper-dim); }
+.news-card a {
+  color: var(--ink) !important; text-decoration: none;
+  font-size: 14px; font-weight: 500; line-height: 1.4;
+}
+.news-card a:hover {
+  text-decoration: underline; text-decoration-color: var(--coral);
+  text-underline-offset: 3px;
+}
+.news-pub {
+  color: var(--ink-3); font-family: var(--mono); font-size: 11px;
+  margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.news-cta {
+  color: var(--coral); font-family: var(--mono); font-size: 10px;
+  margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
+}
 
-    /* Sentiment chip */
-    .sent {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        padding: 4px 10px; text-transform: uppercase; letter-spacing: 0.08em;
-        display: inline-block; border: 1px solid;
-    }
-    .sent-positive { color: var(--bull); border-color: var(--bull); background: var(--bull-soft); }
-    .sent-neutral  { color: var(--ink-2); border-color: var(--rule-strong); background: var(--paper-card); }
-    .sent-negative { color: var(--bear); border-color: var(--bear); background: var(--bear-soft); }
+/* Terminal panel for agent activity */
+.terminal-pane {
+  background: var(--terminal); border: 1px solid #161E18;
+  padding: 14px 18px; font-family: var(--mono); font-size: 12.5px;
+  color: var(--phosphor); border-radius: 4px;
+  background-image: repeating-linear-gradient(
+    0deg, rgba(111,227,154,0.04) 0px, rgba(111,227,154,0.04) 1px,
+    transparent 1px, transparent 3px
+  );
+}
+.agent-row {
+  display: flex; align-items: center; padding: 7px 0;
+  border-bottom: 1px dashed rgba(111,227,154,0.15);
+}
+.agent-row:last-child { border-bottom: none; }
+.agent-status { width: 22px; font-size: 13px; }
+.agent-name {
+  color: var(--phosphor); font-weight: 700; width: 110px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.agent-desc { color: rgba(111,227,154,0.7); flex: 1; padding-right: 12px; }
+.agent-time { color: rgba(111,227,154,0.5); min-width: 55px; text-align: right; }
+@keyframes blink-soft { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+.agent-running .agent-status { animation: blink-soft 800ms ease-in-out infinite; }
 
-    /* News card */
-    .news-card {
-        background: var(--paper-card); border: 1px solid var(--rule);
-        border-left: 3px solid var(--coral);
-        padding: 12px 14px; margin-bottom: 8px;
-        transition: background 150ms ease;
-    }
-    .news-card:hover { background: var(--paper-dim); }
-    .news-card a { color: var(--ink) !important; text-decoration: none;
-                   font-size: 14px; font-weight: 500; line-height: 1.4; }
-    .news-card a:hover { text-decoration: underline; text-decoration-color: var(--coral);
-                         text-underline-offset: 3px; }
-    .news-pub { color: var(--ink-3); font-family: var(--mono); font-size: 11px;
-                margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .news-cta { color: var(--coral); font-family: var(--mono); font-size: 10px;
-                margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em;
-                font-weight: 700; }
+/* Progress bar in coral */
+.stProgress > div > div { background: var(--coral) !important; }
+.stProgress > div { background: var(--paper-dim) !important; }
 
-    /* Terminal panel for agent activity */
-    .terminal-pane {
-        background: var(--terminal); border: 1px solid var(--terminal-2);
-        padding: 16px 20px; font-family: var(--mono); font-size: 13px;
-        color: var(--phosphor);
-        background-image: repeating-linear-gradient(
-            0deg, rgba(111,227,154,0.04) 0px, rgba(111,227,154,0.04) 1px,
-            transparent 1px, transparent 3px
-        );
-    }
-    .agent-row {
-        display: flex; align-items: center; padding: 8px 0;
-        border-bottom: 1px dashed rgba(111,227,154,0.15);
-        font-family: var(--mono); font-size: 13px;
-    }
-    .agent-row:last-child { border-bottom: none; }
-    .agent-status { width: 24px; font-size: 14px; }
-    .agent-name { color: var(--phosphor); font-weight: 700; width: 110px;
-                  text-transform: uppercase; letter-spacing: 0.05em; }
-    .agent-desc { color: rgba(111,227,154,0.7); flex: 1; }
-    .agent-time { color: rgba(111,227,154,0.5); min-width: 55px; text-align: right; }
-    @keyframes blink { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-    .agent-running .agent-status { animation: blink 800ms ease-in-out infinite; }
+/* Inputs */
+.stTextInput input {
+  background: var(--paper-card) !important; color: var(--ink) !important;
+  border: 1px solid var(--rule-strong) !important; border-radius: 4px !important;
+  padding: 0.65rem 0.9rem !important; font-family: var(--mono) !important;
+  font-size: 14px !important; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.stTextInput input:focus {
+  border-color: var(--coral) !important; box-shadow: 0 0 0 1px var(--coral) !important;
+}
 
-    /* Progress bar override (cream paper version) */
-    .stProgress > div > div { background: var(--coral) !important; }
-    .stProgress > div { background: var(--paper-dim) !important; }
+/* Buttons */
+.stButton>button {
+  background: var(--ink) !important; color: var(--paper) !important;
+  border: 1px solid var(--ink) !important; border-radius: 4px !important;
+  padding: 0.6rem 1.4rem !important; font-family: var(--sans) !important;
+  font-weight: 500 !important; font-size: 14px !important;
+  letter-spacing: 0.01em; transition: all 120ms ease;
+}
+.stButton>button:hover {
+  background: var(--coral) !important; border-color: var(--coral) !important;
+  transform: translateY(-1px);
+}
 
-    /* Inputs */
-    .stTextInput input {
-        background: var(--paper-card) !important; color: var(--ink) !important;
-        border: 1px solid var(--rule-strong) !important; border-radius: 4px !important;
-        padding: 0.65rem 0.9rem !important; font-family: var(--mono) !important;
-        font-size: 14px !important; font-weight: 500;
-        text-transform: uppercase; letter-spacing: 0.05em;
-    }
-    .stTextInput input:focus {
-        border-color: var(--coral) !important; box-shadow: 0 0 0 1px var(--coral) !important;
-    }
+/* Expanders */
+div[data-testid="stExpander"] {
+  background: var(--paper-card); border: 1px solid var(--rule);
+  border-radius: 4px; margin: 6px 0;
+}
+div[data-testid="stExpander"] summary,
+div[data-testid="stExpander"] summary p,
+.streamlit-expanderHeader, .streamlit-expanderHeader p {
+  color: var(--ink) !important; font-family: var(--sans) !important;
+  font-size: 13px !important; font-weight: 500 !important;
+}
+div[data-testid="stExpander"] details summary:hover { background: var(--paper-dim); }
 
-    /* Buttons */
-    .stButton>button {
-        background: var(--ink) !important; color: var(--paper) !important;
-        border: 1px solid var(--ink) !important; border-radius: 4px !important;
-        padding: 0.6rem 1.4rem !important; font-family: var(--sans) !important;
-        font-weight: 500 !important; font-size: 14px !important;
-        letter-spacing: 0.01em; transition: all 120ms ease;
-    }
-    .stButton>button:hover {
-        background: var(--coral) !important; border-color: var(--coral) !important;
-        transform: translateY(-1px);
-    }
-    .stButton>button:active { transform: translateY(0); }
+.detail-card {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 10px 12px; margin: 6px 0; border-radius: 4px;
+}
+.detail-label {
+  color: var(--ink-2); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.1em; font-weight: 600;
+}
+.detail-value {
+  color: var(--ink); font-family: var(--mono); font-size: 14px;
+  font-weight: 500; margin-top: 2px; font-feature-settings: 'tnum' 1;
+}
 
-    /* Expanders */
-    div[data-testid="stExpander"] {
-        background: var(--paper-card); border: 1px solid var(--rule);
-        border-radius: 4px; margin: 6px 0;
-    }
-    div[data-testid="stExpander"] summary,
-    div[data-testid="stExpander"] summary p,
-    .streamlit-expanderHeader, .streamlit-expanderHeader p {
-        color: var(--ink) !important; font-family: var(--sans) !important;
-        font-size: 13px !important; font-weight: 500 !important;
-    }
-    div[data-testid="stExpander"] details summary:hover { background: var(--paper-dim); }
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] { gap: 0; border-bottom: 1px solid var(--rule); }
+.stTabs [data-baseweb="tab"] {
+  background: transparent !important; color: var(--ink-2) !important;
+  font-family: var(--sans) !important; font-size: 13px !important;
+  font-weight: 500 !important; padding: 10px 16px !important;
+  border: none !important; border-bottom: 2px solid transparent !important;
+}
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+  color: var(--ink) !important; border-bottom-color: var(--coral) !important;
+}
 
-    /* Detail cards inside expanders */
-    .detail-card {
-        background: var(--paper); border: 1px solid var(--rule);
-        padding: 10px 12px; margin: 6px 0;
-    }
-    .detail-label {
-        color: var(--ink-2); font-size: 10px; text-transform: uppercase;
-        letter-spacing: 0.1em; font-weight: 600;
-    }
-    .detail-value {
-        color: var(--ink); font-family: var(--mono); font-size: 14px;
-        font-weight: 500; margin-top: 2px; font-feature-settings: 'tnum' 1;
-    }
+/* Empty state */
+.empty {
+  background: var(--paper-card); border: 1px solid var(--rule);
+  padding: 56px 40px; text-align: center; margin: 24px 0; border-radius: 4px;
+}
+.empty-title {
+  font-family: var(--serif); font-size: 30px; color: var(--ink);
+  line-height: 1.2; margin-bottom: 12px;
+}
+.empty-body {
+  font-family: var(--sans); font-size: 14.5px; color: var(--ink-2);
+  max-width: 520px; margin: 0 auto; line-height: 1.6;
+}
+.empty-tickers {
+  font-family: var(--mono); margin-top: 14px; color: var(--ink);
+  font-weight: 700; letter-spacing: 0.04em;
+}
 
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] { gap: 0; border-bottom: 1px solid var(--rule); }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent !important; color: var(--ink-2) !important;
-        font-family: var(--sans) !important; font-size: 13px !important;
-        font-weight: 500 !important; padding: 10px 16px !important;
-        border: none !important; border-bottom: 2px solid transparent !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        color: var(--ink) !important; border-bottom-color: var(--coral) !important;
-    }
+.chart-frame {
+  background: var(--paper-card); border: 1px solid var(--rule);
+  padding: 14px 16px; border-radius: 4px; margin-bottom: 8px;
+}
+.chart-label {
+  font-family: var(--sans); font-size: 10px; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  margin-bottom: 10px;
+}
 
-    /* Footer */
-    .footer {
-        margin-top: 56px; padding: 28px 0 16px 0;
-        border-top: 1px solid var(--rule-strong); color: var(--ink-2);
-    }
-    .footer-grid {
-        display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px;
-        margin-bottom: 20px;
-    }
-    .footer h4 {
-        color: var(--ink) !important; font-family: var(--sans);
-        font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;
-        font-weight: 700; margin-bottom: 8px;
-    }
-    .footer-text {
-        color: var(--ink-2); font-size: 13px; line-height: 1.65;
-    }
-    .footer-bottom {
-        text-align: center; padding-top: 16px;
-        border-top: 1px solid var(--rule); color: var(--ink-3);
-        font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
-    }
-
-    /* Empty state */
-    .empty {
-        background: var(--paper-card); border: 1px solid var(--rule);
-        padding: 56px 40px; text-align: center; margin: 24px 0;
-    }
-    .empty-title {
-        font-family: var(--serif); font-size: 32px; color: var(--ink);
-        line-height: 1.2; margin-bottom: 12px;
-    }
-    .empty-body {
-        font-family: var(--sans); font-size: 15px; color: var(--ink-2);
-        max-width: 520px; margin: 0 auto; line-height: 1.6;
-    }
-    .empty-tickers {
-        font-family: var(--mono); margin-top: 14px;
-        color: var(--ink); font-weight: 700; letter-spacing: 0.04em;
-    }
-
-    /* Pull-quote / valuation commentary */
-    .pull-quote {
-        font-family: var(--serif); font-size: 19px; line-height: 1.5;
-        color: var(--ink); padding: 8px 0 8px 18px;
-        border-left: 3px solid var(--coral); max-width: 680px;
-    }
-
-    /* Chart container */
-    .chart-frame {
-        background: var(--paper-card); border: 1px solid var(--rule);
-        padding: 14px 16px; margin-bottom: 12px;
-    }
-    .chart-label {
-        font-family: var(--sans); font-size: 11px; color: var(--ink-2);
-        text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
-        margin-bottom: 10px;
-    }
-    </style>
-    """,
+/* Footer */
+.footer {
+  margin-top: 48px; padding: 24px 0 16px 0;
+  border-top: 1px solid var(--rule-strong); color: var(--ink-2);
+}
+.footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; margin-bottom: 20px;
+}
+.footer h4 {
+  color: var(--ink) !important; font-family: var(--sans); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 8px;
+}
+.footer-text { color: var(--ink-2); font-size: 13px; line-height: 1.7; }
+.footer-bottom {
+  text-align: center; padding-top: 16px; border-top: 1px solid var(--rule);
+  color: var(--ink-3); font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.05em;
+}
+</style>""",
     unsafe_allow_html=True,
 )
 
-# Initialize session state for pipeline result
+# ── Session state ────────────────────────────────────────────────────────
 if "result" not in st.session_state:
     st.session_state.result = None
-if "ticker_done" not in st.session_state:
-    st.session_state.ticker_done = None
 
 # ── Masthead ────────────────────────────────────────────────────────────
+logo_html = (
+    f'<img src="{LOGO_URI}" alt="LoliFin">' if LOGO_URI
+    else '<span style="font-family:var(--serif);font-size:32px;">LoliFin</span>'
+)
 st.markdown(
-    """
+    f"""
     <div class="masthead">
-        <div class="masthead-left">
-            <span class="wordmark">Loli<span class="accent">F</span>in</span>
-            <span class="tagline">Agentic equity research</span>
+        <div>
+            {logo_html}
+            <div class="tagline">Agentic equity research</div>
         </div>
         <div class="masthead-right">
             A project by <b>Iolanda Costa</b><br>
@@ -422,23 +392,16 @@ with col_btn:
 def fmt_money(v):
     if v is None or not isinstance(v, (int, float)):
         return "—"
-    if abs(v) >= 1_000_000:
-        return f"${v/1_000_000:.2f}T"
-    if abs(v) >= 1000:
-        return f"${v/1000:.2f}B"
+    if abs(v) >= 1_000_000: return f"${v/1_000_000:.2f}T"
+    if abs(v) >= 1000:      return f"${v/1000:.2f}B"
     return f"${v:,.0f}M"
 
 
 def fmt_pct(v, signed=False):
-    if v is None or not isinstance(v, (int, float)):
-        return "—"
+    if v is None or not isinstance(v, (int, float)): return "—"
     pct = v * 100 if abs(v) < 5 else v
     s = f"{pct:+.1f}%" if signed else f"{pct:.1f}%"
-    return s.replace("-", "−")  # proper minus sign
-
-
-def fmt_signed_pct(v):
-    return fmt_pct(v, signed=True)
+    return s.replace("-", "−")
 
 
 def tile(label, value, sub="", value_class=""):
@@ -457,7 +420,21 @@ def risk_label(score):
     return "elevated"
 
 
-# ── Agents with substeps ─────────────────────────────────────────────────
+# Altair chart helper — consistent paper theme + interactivity
+def paper_chart(chart):
+    return (
+        chart
+        .configure_view(strokeWidth=0, fill="#FBF6EE")
+        .configure_axis(
+            labelFont="JetBrains Mono", titleFont="Geist",
+            labelColor="#5C544A", titleColor="#1A1714",
+            gridColor="rgba(26,23,20,0.08)", domainColor="#1A1714",
+            tickColor="#5C544A",
+        )
+    )
+
+
+# ── Agents ───────────────────────────────────────────────────────────────
 AGENTS = [
     ("filings",   "Filings",   "Pulling fundamentals from Yahoo Finance"),
     ("news",      "News",      "Scanning recent headlines"),
@@ -468,21 +445,14 @@ AGENTS = [
 AGENT_KEYS = [a[0] for a in AGENTS]
 
 
-def render_progress(container, statuses, timings, in_terminal=True):
-    """Render the live progress card."""
+def render_progress(container, statuses, timings):
     rows = []
     for key, name, desc in AGENTS:
         s = statuses.get(key, "pending")
-        if s == "done":
-            icon, row_cls = "●", ""
-        elif s == "running":
-            icon, row_cls = "◐", "agent-running"
-        else:
-            icon, row_cls = "○", ""
-        if s == "done":
-            current_desc = "complete"
-        else:
-            current_desc = desc
+        if s == "done":    icon, row_cls = "●", ""
+        elif s == "running": icon, row_cls = "◐", "agent-running"
+        else:              icon, row_cls = "○", ""
+        current_desc = "complete" if s == "done" else desc
         t = timings.get(key, "")
         t_html = f'<span class="agent-time">{t}</span>' if t else ""
         rows.append(
@@ -492,10 +462,10 @@ def render_progress(container, statuses, timings, in_terminal=True):
             f'<span class="agent-desc">{current_desc}</span>'
             f'{t_html}</div>'
         )
-    inner = "".join(rows)
-    if in_terminal:
-        inner = f'<div class="terminal-pane">{inner}</div>'
-    container.markdown(inner, unsafe_allow_html=True)
+    container.markdown(
+        f'<div class="terminal-pane">{"".join(rows)}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ── Run pipeline ─────────────────────────────────────────────────────────
@@ -508,10 +478,7 @@ if run:
     progress_bar = st.progress(0, text="Initializing 5-agent pipeline")
     progress_box = st.empty()
 
-    statuses = {}
-    timings = {}
-    render_progress(progress_box, statuses, timings)
-
+    statuses, timings = {}, {}
     statuses[AGENT_KEYS[0]] = "running"
     render_progress(progress_box, statuses, timings)
 
@@ -531,10 +498,8 @@ if run:
                     pct = int((completed / total) * 100)
                     progress_bar.progress(pct, text=f"{completed} of {total} agents complete · {elapsed:.1f}s")
                     next_idx = AGENT_KEYS.index(node_name) + 1
-                    if next_idx < total:
-                        nk = AGENT_KEYS[next_idx]
-                        if statuses.get(nk) is None:
-                            statuses[nk] = "running"
+                    if next_idx < total and statuses.get(AGENT_KEYS[next_idx]) is None:
+                        statuses[AGENT_KEYS[next_idx]] = "running"
                     render_progress(progress_box, statuses, timings)
                 if isinstance(node_output, dict):
                     for k, v in node_output.items():
@@ -544,8 +509,10 @@ if run:
                             result[k] = v
 
         for k in AGENT_KEYS:
-            if statuses.get(k) != "done": statuses[k] = "done"
-        progress_bar.progress(100, text=f"Complete · {time.time() - pipeline_start:.1f}s total")
+            if statuses.get(k) != "done":
+                statuses[k] = "done"
+        total_time = time.time() - pipeline_start
+        progress_bar.progress(100, text=f"Complete · {total_time:.1f}s total")
         render_progress(progress_box, statuses, timings)
         time.sleep(0.4)
         progress_bar.empty()
@@ -556,12 +523,11 @@ if run:
 
     result["ticker"] = ticker
     result["_timings"] = timings
-    result["_total_time"] = time.time() - pipeline_start
+    result["_total_time"] = total_time
     st.session_state.result = result
-    st.session_state.ticker_done = ticker
 
 
-# ── Render results from session ─────────────────────────────────────────
+# ── Render results ──────────────────────────────────────────────────────
 result = st.session_state.result
 
 if result:
@@ -574,34 +540,32 @@ if result:
     risk_score = result.get("risk_score")
     sentiment = (result.get("news_sentiment") or "neutral").lower()
     price_history = result.get("price_history") or []
+    upside = val.get("upside_pct")
 
     # ── Hero ────────────────────────────────────────────────────
-    upside = val.get("upside_pct")
-    upside_class = "bull" if (isinstance(upside, (int, float)) and upside > 0) else (
-        "bear" if (isinstance(upside, (int, float)) and upside < 0) else ""
-    )
-    upside_str = fmt_signed_pct(upside) if upside is not None else "—"
-
     st.markdown(
         f"""
         <div class="memo-hero">
-            <div class="memo-h-row">
-                <div>
-                    <div class="memo-company">{company}</div>
-                    <div class="memo-ticker">{ticker}</div>
-                    <div class="memo-meta">
-                        {fins.get('sector') or ''}
-                        {' · ' + fins.get('industry') if fins.get('industry') else ''}
-                    </div>
+            <div>
+                <div class="memo-company">{company}</div>
+                <div class="memo-ticker">{ticker}</div>
+                <div class="memo-meta">
+                    {fins.get('sector') or ''}
+                    {' · ' + fins.get('industry') if fins.get('industry') else ''}
                 </div>
-                <div><span class="rec-badge rec-{rec}">{rec}</span></div>
             </div>
+            <div><span class="rec-badge rec-{rec}">{rec}</span></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ── KPI row ──────────────────────────────────────────────────
+    # ── KPI tiles ──────────────────────────────────────────────
+    upside_class = "bull" if (isinstance(upside, (int, float)) and upside > 0) else (
+        "bear" if (isinstance(upside, (int, float)) and upside < 0) else ""
+    )
+    upside_str = fmt_pct(upside, signed=True) if upside is not None else "—"
+
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(tile("Current price",
@@ -610,10 +574,10 @@ if result:
     with c2:
         fv = val.get("blended_fair_value")
         dcf = val.get("dcf_fair_value"); comp = val.get("comp_fair_value")
+        sub = ""
         if dcf and comp: sub = f"DCF ${dcf} · Comps ${comp}"
         elif dcf: sub = f"DCF ${dcf}"
         elif comp: sub = f"Comps ${comp}"
-        else: sub = ""
         st.markdown(tile("Fair value", f"${fv:.2f}" if fv else "—", sub),
                     unsafe_allow_html=True)
     with c3:
@@ -624,7 +588,7 @@ if result:
         st.markdown(tile("Risk score", rs_display, risk_label(risk_score)),
                     unsafe_allow_html=True)
 
-    # KPI expanders (separate row so no overlap with tiles)
+    # KPI "why?" expanders (separate row → no overlap with tiles above)
     e1, e2, e3, e4 = st.columns(4)
     with e1:
         with st.expander("Why this price?"):
@@ -644,7 +608,7 @@ if result:
                 f"Growth: {fmt_pct(a.get('growth'))}<br/>"
                 f"Terminal multiple: {a.get('terminal_multiple') or '—'}x<br/>"
                 f"Sector P/E (for comps): {a.get('sector_pe') or '—'}<br/><br/>"
-                f"<b>Blended</b> = average of DCF and Comps.</div>",
+                f"<b>Blended</b> = average of DCF and Comps methods.</div>",
                 unsafe_allow_html=True,
             )
     with e3:
@@ -671,51 +635,41 @@ if result:
                     if sev in sc: sc[sev] += 1
                 st.markdown(
                     f"<div class='body'>{len(risks)} risks identified.<br/>"
-                    f"<span class='bear-text'><b>{sc['high']} high</b></span> · "
+                    f"<span style='color:var(--bear);'><b>{sc['high']} high</b></span> · "
                     f"<b>{sc['medium']} medium</b> · "
-                    f"<span class='bull-text'><b>{sc['low']} low</b></span><br/><br/>"
-                    f"Score (1 safe → 10 avoid) blends count, severity mix, and "
-                    f"source diversity across filings, news, and valuation.</div>",
+                    f"<span style='color:var(--bull);'><b>{sc['low']} low</b></span><br/><br/>"
+                    f"Score (1 safe → 10 avoid) blends count, severity mix, and source "
+                    f"diversity across filings, news, and valuation signals.</div>",
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown("<div class='body'>No risks identified.</div>", unsafe_allow_html=True)
 
-    # ── Charts row 1: Price history + Valuation comparison ─────
+    # ── Charts row 1: Price + Valuation ────────────────────────
     st.markdown('<div class="section">Visuals</div>', unsafe_allow_html=True)
     chart_left, chart_right = st.columns([1.4, 1])
 
     with chart_left:
         st.markdown('<div class="chart-label">6-month price history</div>', unsafe_allow_html=True)
-        if price_history and len(price_history) > 0:
+        if price_history:
             df = pd.DataFrame(price_history)
             df["date"] = pd.to_datetime(df["date"])
-            df = df.set_index("date")
             try:
                 line = (
-                    alt.Chart(df.reset_index())
+                    alt.Chart(df)
                     .mark_line(color="#FF5B3C", strokeWidth=2)
                     .encode(
-                        x=alt.X("date:T", title=None,
-                                axis=alt.Axis(labelColor="#5C544A", grid=False,
-                                              tickColor="#5C544A", domainColor="#1A1714")),
-                        y=alt.Y("close:Q", title=None,
-                                scale=alt.Scale(zero=False),
-                                axis=alt.Axis(labelColor="#5C544A",
-                                              gridColor="rgba(26,23,20,0.08)",
-                                              tickColor="#5C544A", domainColor="#1A1714",
-                                              format="$.0f")),
+                        x=alt.X("date:T", title=None),
+                        y=alt.Y("close:Q", title=None, scale=alt.Scale(zero=False)),
                         tooltip=[alt.Tooltip("date:T", title="Date"),
                                  alt.Tooltip("close:Q", title="Close", format="$.2f")],
                     )
                     .properties(height=260)
-                    .configure_view(strokeWidth=0, fill="#FBF6EE")
-                    .configure_axis(labelFont="JetBrains Mono", titleFont="Geist")
+                    .interactive()
                 )
-                st.altair_chart(line, use_container_width=True)
+                st.altair_chart(paper_chart(line), use_container_width=True)
             except Exception:
-                # Fallback to native Streamlit chart
-                st.line_chart(df["close"], height=260, color="#FF5B3C")
+                st.line_chart(df.set_index("date")["close"], height=260)
         else:
             st.markdown("<div class='body'>Price history unavailable.</div>", unsafe_allow_html=True)
 
@@ -734,13 +688,8 @@ if result:
                     .mark_bar(size=36)
                     .encode(
                         x=alt.X("method:N", title=None, sort=None,
-                                axis=alt.Axis(labelColor="#1A1714", labelAngle=0,
-                                              labelFont="JetBrains Mono", labelFontSize=11,
-                                              domainColor="#1A1714", tickColor="#5C544A")),
-                        y=alt.Y("value:Q", title=None,
-                                axis=alt.Axis(labelColor="#5C544A",
-                                              gridColor="rgba(26,23,20,0.08)",
-                                              format="$.0f")),
+                                axis=alt.Axis(labelAngle=0, labelFont="JetBrains Mono")),
+                        y=alt.Y("value:Q", title=None, axis=alt.Axis(format="$.0f")),
                         color=alt.Color("method:N", scale=alt.Scale(
                             domain=["Current", "DCF", "Comps", "Blended"],
                             range=["#5C544A", "#1F7A4D", "#F5C842", "#FF5B3C"],
@@ -748,15 +697,14 @@ if result:
                         tooltip=[alt.Tooltip("method"), alt.Tooltip("value:Q", format="$.2f")],
                     )
                     .properties(height=260)
-                    .configure_view(strokeWidth=0, fill="#FBF6EE")
                 )
-                st.altair_chart(bar, use_container_width=True)
+                st.altair_chart(paper_chart(bar), use_container_width=True)
             except Exception:
                 st.bar_chart(bdf.set_index("method"))
         else:
             st.markdown("<div class='body'>Valuation data unavailable.</div>", unsafe_allow_html=True)
 
-    # ── Charts row 2: margins / cash-debt / risk donut ───────────
+    # ── Charts row 2: margins, cash/debt, risk donut ───────────
     v1, v2, v3 = st.columns(3)
 
     with v1:
@@ -771,21 +719,18 @@ if result:
             try:
                 mc = (
                     alt.Chart(mdf)
-                    .mark_bar(size=30)
+                    .mark_bar(size=28)
                     .encode(
                         y=alt.Y("type:N", title=None, sort=None,
-                                axis=alt.Axis(labelColor="#1A1714", labelFont="Geist", labelFontSize=12)),
-                        x=alt.X("value:Q", title=None,
-                                scale=alt.Scale(domain=[0, 100]),
-                                axis=alt.Axis(labelColor="#5C544A",
-                                              gridColor="rgba(26,23,20,0.08)", format=".0f")),
+                                axis=alt.Axis(labelFont="Geist", labelFontSize=12)),
+                        x=alt.X("value:Q", title=None, scale=alt.Scale(domain=[0, 100]),
+                                axis=alt.Axis(format=".0f")),
                         color=alt.value("#1F7A4D"),
                         tooltip=[alt.Tooltip("type"), alt.Tooltip("value:Q", format=".1f", title="%")],
                     )
-                    .properties(height=180)
-                    .configure_view(strokeWidth=0, fill="#FBF6EE")
+                    .properties(height=200)
                 )
-                st.altair_chart(mc, use_container_width=True)
+                st.altair_chart(paper_chart(mc), use_container_width=True)
             except Exception:
                 st.bar_chart(mdf.set_index("type"))
         else:
@@ -804,18 +749,16 @@ if result:
                     .mark_bar(size=42)
                     .encode(
                         x=alt.X("type:N", title=None, sort=None,
-                                axis=alt.Axis(labelColor="#1A1714", labelAngle=0, labelFont="Geist")),
-                        y=alt.Y("value:Q", title=None,
-                                axis=alt.Axis(labelColor="#5C544A",
-                                              gridColor="rgba(26,23,20,0.08)", format="$,.0f")),
+                                axis=alt.Axis(labelAngle=0, labelFont="Geist")),
+                        y=alt.Y("value:Q", title=None, axis=alt.Axis(format="$,.0f")),
                         color=alt.Color("type:N", scale=alt.Scale(
                             domain=["Cash", "Debt"], range=["#1F7A4D", "#C2391C"]), legend=None),
-                        tooltip=[alt.Tooltip("type"), alt.Tooltip("value:Q", format="$,.0f", title="$M")],
+                        tooltip=[alt.Tooltip("type"),
+                                 alt.Tooltip("value:Q", format="$,.0f", title="$M")],
                     )
-                    .properties(height=180)
-                    .configure_view(strokeWidth=0, fill="#FBF6EE")
+                    .properties(height=200)
                 )
-                st.altair_chart(cc, use_container_width=True)
+                st.altair_chart(paper_chart(cc), use_container_width=True)
             except Exception:
                 st.bar_chart(cdf.set_index("type"))
         else:
@@ -833,26 +776,28 @@ if result:
                 try:
                     donut = (
                         alt.Chart(rdf)
-                        .mark_arc(innerRadius=42, outerRadius=78, stroke="#FBF6EE", strokeWidth=2)
+                        .mark_arc(innerRadius=38, outerRadius=70,
+                                  stroke="#FBF6EE", strokeWidth=2)
                         .encode(
                             theta=alt.Theta("count:Q"),
                             color=alt.Color("severity:N", scale=alt.Scale(
                                 domain=["high", "medium", "low"],
                                 range=["#C2391C", "#5C544A", "#1F7A4D"],
-                            ), legend=alt.Legend(orient="bottom", labelColor="#1A1714",
-                                                  title=None, labelFont="Geist", labelFontSize=11)),
+                            ), legend=alt.Legend(
+                                orient="bottom", labelColor="#1A1714",
+                                title=None, labelFont="Geist", labelFontSize=11,
+                            )),
                             tooltip=["severity", "count"],
                         )
-                        .properties(height=180)
-                        .configure_view(strokeWidth=0, fill="#FBF6EE")
+                        .properties(height=240)
                     )
-                    st.altair_chart(donut, use_container_width=True)
+                    st.altair_chart(paper_chart(donut), use_container_width=True)
                 except Exception:
                     st.bar_chart(rdf.set_index("severity"))
         else:
             st.markdown("<div class='body'>No risks to chart.</div>", unsafe_allow_html=True)
 
-    # ── Two-column body ────────────────────────────────────────────
+    # ── Two-column body ─────────────────────────────────────────
     left, right = st.columns([1.2, 1])
 
     with left:
@@ -869,14 +814,22 @@ if result:
             st.markdown("")
             st.markdown(tile("Total debt", fmt_money(fins.get("total_debt"))), unsafe_allow_html=True)
             st.markdown("")
-            growth = fins.get("revenue_growth_yoy")
-            growth_cls = "bull" if (isinstance(growth, (int, float)) and growth > 0) else (
-                "bear" if (isinstance(growth, (int, float)) and growth < 0) else ""
+            g = fins.get("revenue_growth_yoy")
+            g_cls = "bull" if (isinstance(g, (int, float)) and g > 0) else (
+                "bear" if (isinstance(g, (int, float)) and g < 0) else ""
             )
-            st.markdown(tile("Revenue growth (YoY)", fmt_signed_pct(growth) if growth else "—",
-                             value_class=growth_cls), unsafe_allow_html=True)
+            st.markdown(tile("Revenue growth (YoY)",
+                             fmt_pct(g, signed=True) if g else "—", value_class=g_cls),
+                        unsafe_allow_html=True)
 
         with st.expander("More fundamentals"):
+            pe_block = (
+                f"<div class='detail-card'><div class='detail-label'>Trailing P/E</div>"
+                f"<div class='detail-value'>{fins.get('trailing_pe'):.1f}x</div></div>"
+                if fins.get('trailing_pe') else
+                f"<div class='detail-card'><div class='detail-label'>Trailing P/E</div>"
+                f"<div class='detail-value'>—</div></div>"
+            )
             st.markdown(
                 f"<div class='detail-card'><div class='detail-label'>Market cap</div>"
                 f"<div class='detail-value'>{fmt_money(fins.get('market_cap'))}</div></div>"
@@ -884,11 +837,7 @@ if result:
                 f"<div class='detail-value'>{fmt_pct(fins.get('gross_margin'))}</div></div>"
                 f"<div class='detail-card'><div class='detail-label'>Cash on hand</div>"
                 f"<div class='detail-value'>{fmt_money(fins.get('cash'))}</div></div>"
-                f"<div class='detail-card'><div class='detail-label'>Trailing P/E</div>"
-                f"<div class='detail-value'>{fins.get('trailing_pe'):.1f}x</div></div>"
-                if fins.get('trailing_pe') else
-                f"<div class='detail-card'><div class='detail-label'>Trailing P/E</div>"
-                f"<div class='detail-value'>—</div></div>",
+                f"{pe_block}",
                 unsafe_allow_html=True,
             )
 
@@ -944,14 +893,12 @@ if result:
                 unsafe_allow_html=True,
             )
 
-    # ── Deep dive ─────────────────────────────────────────────
+    # ── Deep dive ────────────────────────────────────────────────
     st.markdown('<div class="section">Deep dive</div>', unsafe_allow_html=True)
     if result.get("memo_markdown"):
         with st.expander("Full investment memo", expanded=False):
-            st.markdown(
-                f"<div class='body'>{result['memo_markdown']}</div>",
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"<div class='body'>{result['memo_markdown']}</div>",
+                        unsafe_allow_html=True)
 
     with st.expander("Agent outputs (structured view)"):
         tabs = st.tabs(["Filings", "News", "Valuation", "Risk", "Editor"])
@@ -981,7 +928,7 @@ if result:
                 if k == "assumptions":
                     st.markdown(
                         f"<div class='detail-card'><div class='detail-label'>Assumptions</div>"
-                        f"<div class='detail-value' style='font-size:13px;'>"
+                        f"<div class='detail-value' style='font-size:12.5px;'>"
                         f"{', '.join(f'{kk}: {vv}' for kk, vv in (v or {}).items() if vv is not None)}"
                         f"</div></div>", unsafe_allow_html=True)
                 else:
@@ -1015,7 +962,6 @@ if result:
     # ── Pipeline log (collapsed, at the bottom) ──────────────────
     timings = result.get("_timings") or {}
     total_t = result.get("_total_time") or 0
-    statuses_done = {k: "done" for k in AGENT_KEYS}
     with st.expander(f"Pipeline log · {total_t:.1f}s total"):
         rows = []
         for key, name, desc in AGENTS:
@@ -1036,7 +982,7 @@ if result:
                 st.warning(e)
 
 else:
-    # ── Empty state ────────────────────────────────────────────
+    # ── Empty state ──────────────────────────────────────────────
     st.markdown(
         """
         <div class="empty">

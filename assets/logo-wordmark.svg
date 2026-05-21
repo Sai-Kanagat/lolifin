@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100" width="360" height="100">
+  
+  <text x="0" y="78" font-family="Instrument Serif, Times New Roman, Georgia, serif" font-size="92" font-weight="400" fill="#1A1714" letter-spacing="-0.02em">LoliFin</text>
+  
+  <rect x="106" y="14" width="14" height="14" fill="#F2E8DA"></rect>
+  <rect x="190" y="14" width="14" height="14" fill="#F2E8DA"></rect>
+  
+  <rect x="106" y="16" width="11" height="11" fill="#FF5B3C"></rect>
+  <rect x="190" y="16" width="11" height="11" fill="#FF5B3C"></rect>
+</svg>
