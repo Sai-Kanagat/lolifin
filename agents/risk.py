@@ -32,8 +32,6 @@ Always return at least 3 risks. Be honest, not alarmist.
 
 
 def risk_agent(state: ResearchState) -> ResearchState:
-    errors = state.get("errors") or []
-
     try:
         context = {
             "ticker": state.get("ticker"),
@@ -62,8 +60,7 @@ def risk_agent(state: ResearchState) -> ResearchState:
         return {
             "risks": parsed.get("risks", []),
             "risk_score": parsed.get("overall_score"),
-            "errors": errors,
+            "errors": [],
         }
     except Exception as e:
-        errors.append(f"risk_agent: {e}")
-        return {"risks": [], "risk_score": None, "errors": errors}
+        return {"risks": [], "risk_score": None, "errors": [f"risk_agent: {e}"]}

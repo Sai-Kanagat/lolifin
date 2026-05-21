@@ -28,7 +28,6 @@ Be evidence-based. If headlines are mixed, say neutral.
 
 def news_agent(state: ResearchState) -> ResearchState:
     ticker = state["ticker"]
-    errors = state.get("errors") or []
 
     try:
         tk = yf.Ticker(ticker)
@@ -68,8 +67,7 @@ def news_agent(state: ResearchState) -> ResearchState:
             "news_summary": parsed.get("summary"),
             "news_sentiment": parsed.get("sentiment"),
             "news_sources": items[:5],
-            "errors": errors,
+            "errors": [],
         }
     except Exception as e:
-        errors.append(f"news_agent: {e}")
-        return {"news_summary": None, "news_sentiment": "neutral", "news_sources": [], "errors": errors}
+        return {"news_summary": None, "news_sentiment": "neutral", "news_sources": [], "errors": [f"news_agent: {e}"]}

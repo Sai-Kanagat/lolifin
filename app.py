@@ -1,5 +1,5 @@
 """
-Lolifin — Streamlit dashboard.
+LoliFin — Streamlit dashboard.
 
 Run: streamlit run app.py
 """
@@ -7,7 +7,7 @@ import streamlit as st
 from graph import graph
 
 st.set_page_config(
-    page_title="Lolifin · Equity Research",
+    page_title="LoliFin · Equity Research",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -129,7 +129,7 @@ st.markdown(
     """
     <div class="brand-bar">
         <div>
-            <span class="brand-name">Lolifin</span>
+            <span class="brand-name">LoliFin</span>
             <span class="brand-tag">  ·  Agentic Equity Research</span>
         </div>
         <div class="brand-credit">
@@ -216,10 +216,23 @@ if run:
     if not ticker:
         st.error("Enter a ticker.")
     else:
-        with st.spinner(f"Running 5-agent pipeline for {ticker}..."):
+        status = st.status(f"Researching **{ticker}**", expanded=True)
+        with status:
+            st.markdown(
+                "<div style='color:#8a93a8;font-size:0.88rem;line-height:1.8;'>"
+                "Filings agent → fundamentals<br/>"
+                "News agent → recent narrative<br/>"
+                "Valuation agent → DCF + comps<br/>"
+                "Risk agent → red flags<br/>"
+                "Editor agent → composing memo"
+                "</div>",
+                unsafe_allow_html=True,
+            )
             try:
                 result = graph.invoke({"ticker": ticker})
+                status.update(label=f"Memo ready for **{ticker}**", state="complete", expanded=False)
             except Exception as e:
+                status.update(label="Pipeline failed", state="error")
                 st.error(f"Pipeline failed: {e}")
                 st.stop()
 
@@ -372,7 +385,7 @@ else:
 st.divider()
 st.markdown(
     "<div style='text-align:center;color:#6b7280;font-size:0.78rem;padding:1rem 0;'>"
-    "© 2026 Iolanda Costa · Lolifin · Built with LangGraph + Gemini"
+    "© 2026 Iolanda Costa · LoliFin · Built with LangGraph + Gemini"
     "</div>",
     unsafe_allow_html=True,
 )

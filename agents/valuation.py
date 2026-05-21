@@ -37,7 +37,6 @@ def _dcf(fcf: float, growth: float, wacc: float = 0.09, terminal_mult: float = 1
 
 def valuation_agent(state: ResearchState) -> ResearchState:
     ticker = state["ticker"]
-    errors = state.get("errors") or []
     fins = state.get("financials") or {}
 
     try:
@@ -82,7 +81,6 @@ def valuation_agent(state: ResearchState) -> ResearchState:
             HumanMessage(content=f"Ticker: {ticker}\nValuation: {valuation}"),
         ])
 
-        return {"valuation": valuation, "valuation_notes": resp.content.strip(), "errors": errors}
+        return {"valuation": valuation, "valuation_notes": resp.content.strip(), "errors": []}
     except Exception as e:
-        errors.append(f"valuation_agent: {e}")
-        return {"valuation": None, "valuation_notes": None, "errors": errors}
+        return {"valuation": None, "valuation_notes": None, "errors": [f"valuation_agent: {e}"]}

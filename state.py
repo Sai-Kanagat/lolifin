@@ -3,8 +3,14 @@ Shared state passed between agents in the LangGraph pipeline.
 
 Each agent reads from this dict and writes its results back. This is the
 "shared memory" that makes the system *agentic* rather than a single prompt.
+
+Note on `errors`: it uses `Annotated[list, operator.add]` so that when
+parallel agents (news + valuation) both append to it, LangGraph concatenates
+the lists instead of complaining about concurrent writes. Every other key is
+written by exactly one agent, so no reducer needed.
 """
-from typing import TypedDict, Optional
+import operator
+from typing import TypedDict, Optional, Annotated
 
 
 class ResearchState(TypedDict, total=False):
@@ -13,26 +19,26 @@ class ResearchState(TypedDict, total=False):
 
     # Filings agent output
     company_name: Optional[str]
-    financials: Optional[dict]   # revenue, net_income, fcf, debt, margins, etc.
+    financials: Optional[dict]
     filing_url: Optional[str]
     filing_date: Optional[str]
 
     # News agent output
     news_summary: Optional[str]
-    news_sentiment: Optional[str]   # "positive" | "neutral" | "negative"
-    news_sources: Optional[list]    # list of {title, url, date}
+    news_sentiment: Optional[str]
+    news_sources: Optional[list]
 
     # Valuation agent output
-    valuation: Optional[dict]       # {dcf_fair_value, comp_fair_value, current_price, upside_pct}
+    valuation: Optional[dict]
     valuation_notes: Optional[str]
 
     # Risk agent output
-    risks: Optional[list]           # list of {risk, severity, source}
-    risk_score: Optional[int]       # 1-10
+    risks: Optional[list]
+    risk_score: Optional[int]
 
     # Editor agent output
     memo_markdown: Optional[str]
-    recommendation: Optional[str]   # "BUY" | "HOLD" | "SELL"
+    recommendation: Optional[str]
 
-    # Error tracking
-    errors: Optional[list]
+    # Error tracking — additive across parallel branches
+    errors: Annotated[list, operator.add]

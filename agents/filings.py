@@ -39,7 +39,6 @@ If a field is unavailable, use null. Do not invent numbers.
 
 def filings_agent(state: ResearchState) -> ResearchState:
     ticker = state["ticker"]
-    errors = state.get("errors") or []
 
     try:
         tk = yf.Ticker(ticker)
@@ -82,8 +81,7 @@ def filings_agent(state: ResearchState) -> ResearchState:
             "financials": financials,
             "filing_url": f"https://finance.yahoo.com/quote/{ticker}",
             "filing_date": info.get("mostRecentQuarter"),
-            "errors": errors,
+            "errors": [],
         }
     except Exception as e:
-        errors.append(f"filings_agent: {e}")
-        return {"errors": errors, "financials": None}
+        return {"errors": [f"filings_agent: {e}"], "financials": None}
