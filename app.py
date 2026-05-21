@@ -26,10 +26,9 @@ st.markdown(
 
     /* Force readable text everywhere */
     .stApp p, .stApp li, .stApp span, .stApp div,
-    .stMarkdown, .stMarkdown p, .stMarkdown li {
-        color: #e5e7eb;
-    }
-    h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+    .stMarkdown, .stMarkdown p, .stMarkdown li,
+    .stMarkdown strong { color: #e5e7eb; }
+    h1, h2, h3, h4, h5, h6,
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
     .stMarkdown h4, .stMarkdown h5 { color: #ffffff !important; }
 
@@ -109,22 +108,37 @@ st.markdown(
     /* News card */
     .news-card {
         background: #161b2c; border-left: 3px solid #4b6bfb;
-        padding: 11px 14px; margin-bottom: 8px; border-radius: 4px;
+        padding: 12px 14px; margin-bottom: 10px; border-radius: 4px;
+        transition: all 0.15s ease;
     }
-    .news-card a { color: #e5e7eb !important; text-decoration: none; font-size: 0.92rem; }
+    .news-card:hover { background: #1c2238; border-left-color: #6d8bff; }
+    .news-card a { color: #e5e7eb !important; text-decoration: none; font-size: 0.93rem; font-weight: 500; }
     .news-card a:hover { color: #fff !important; }
-    .news-pub { color: #9ca3af; font-size: 0.72rem; margin-top: 3px; }
+    .news-pub { color: #9ca3af; font-size: 0.72rem; margin-top: 4px; }
+    .news-cta { color: #6d8bff; font-size: 0.7rem; margin-top: 6px;
+                text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
 
-    /* Agent progress */
+    /* Agent progress rows */
     .agent-row {
-        display: flex; align-items: center; padding: 10px 14px;
+        display: flex; align-items: center; padding: 11px 14px;
         background: #161b2c; border: 1px solid #2a3142; border-radius: 8px;
         margin-bottom: 8px; font-size: 0.92rem;
     }
-    .agent-status { width: 26px; font-size: 1.1rem; text-align: center; }
+    .agent-status { width: 28px; font-size: 1.15rem; text-align: center; }
     .agent-name { color: #fff; font-weight: 600; width: 130px; }
-    .agent-desc { color: #9ca3af; flex: 1; }
-    .agent-time { color: #6b7280; font-size: 0.78rem; }
+    .agent-desc { color: #9ca3af; flex: 1; font-size: 0.88rem; }
+    .agent-time { color: #6b7280; font-size: 0.78rem; min-width: 50px; text-align: right; }
+
+    /* Progress bar inside agent rows */
+    @keyframes pulse-glow {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    .agent-running .agent-status { animation: pulse-glow 1.2s ease-in-out infinite; }
+
+    /* Streamlit progress bar override */
+    .stProgress > div > div { background: linear-gradient(90deg, #4b6bfb, #34d399) !important; }
+    .stProgress > div { background: #1f2937 !important; }
 
     /* Inputs */
     .stTextInput input {
@@ -142,6 +156,25 @@ st.markdown(
         background: linear-gradient(90deg, #3b5beb 0%, #5d7bff 100%) !important;
     }
 
+    /* Expander */
+    .streamlit-expanderHeader,
+    .streamlit-expanderHeader p { color: #e5e7eb !important; font-weight: 500 !important; }
+    div[data-testid="stExpander"] {
+        background: #161b2c; border: 1px solid #2a3142; border-radius: 8px;
+        margin-bottom: 8px;
+    }
+    div[data-testid="stExpander"] details summary { color: #e5e7eb !important; }
+
+    /* Detail cards inside expanders */
+    .detail-card { background: #1c2238; border-radius: 8px; padding: 12px 14px; margin: 8px 0; }
+    .detail-label { color: #9ca3af; font-size: 0.72rem; text-transform: uppercase;
+                    letter-spacing: 0.08em; font-weight: 700; }
+    .detail-value { color: #fff; font-size: 1.05rem; font-weight: 600; margin-top: 2px; }
+
+    /* Clickable KPI */
+    .kpi-clickable { cursor: pointer; transition: all 0.15s; }
+    .kpi-clickable:hover { border-color: #4b6bfb; transform: translateY(-1px); }
+
     /* Footer */
     .footer {
         margin-top: 3rem; padding: 1.6rem 0 1rem 0;
@@ -156,8 +189,8 @@ st.markdown(
     .footer-bottom { text-align: center; padding-top: 1rem;
                      border-top: 1px solid #2a3142; color: #6b7280; font-size: 0.78rem; }
 
-    /* Expander */
-    .streamlit-expanderHeader { color: #d1d5db !important; }
+    /* Make memo markdown links blue */
+    .memo-box a, .body a { color: #6d8bff !important; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -205,6 +238,8 @@ def kpi_card(label, value, sub=""):
 def fmt_money(v):
     if v is None or not isinstance(v, (int, float)):
         return "—"
+    if abs(v) >= 1_000_000:
+        return f"${v/1_000_000:.2f}T"
     if abs(v) >= 1000:
         return f"${v/1000:.2f}B"
     return f"${v:,.0f}M"
@@ -226,37 +261,64 @@ def risk_label(score):
     return "elevated"
 
 
-# ── Live agent progress ──────────────────────────────────────────────────
+# ── Agents definition with sub-tasks for progress display ────────────────
 AGENTS = [
-    ("filings",   "Filings",   "Pulling fundamentals from Yahoo Finance"),
-    ("news",      "News",      "Scanning recent headlines"),
-    ("valuation", "Valuation", "Running DCF + comparable multiples"),
-    ("risk",      "Risk",      "Cross-referencing red flags"),
-    ("editor",    "Editor",    "Composing the memo"),
+    ("filings",   "Filings",   [
+        "Connecting to Yahoo Finance",
+        "Fetching fundamentals (revenue, FCF, margins, debt)",
+        "Pulling 6-month price history",
+        "Asking LLM for business summary",
+    ]),
+    ("news",      "News",      [
+        "Pulling recent headlines from Yahoo",
+        "Normalizing publisher and URL data",
+        "Sending to LLM for sentiment classification",
+    ]),
+    ("valuation", "Valuation", [
+        "Computing 5-year DCF projection",
+        "Calculating comparable multiples (sector P/E)",
+        "Blending DCF + comps into fair value",
+        "Asking LLM to narrate the result",
+    ]),
+    ("risk",      "Risk",      [
+        "Reading filings + news + valuation context",
+        "Cross-referencing red-flag patterns",
+        "Asking LLM to rank severities",
+        "Falling back to deterministic rules if needed",
+    ]),
+    ("editor",    "Editor",    [
+        "Aggregating outputs from all four agents",
+        "Computing Buy/Hold/Sell deterministically",
+        "Composing the final memo prose",
+    ]),
 ]
+AGENT_KEYS = [a[0] for a in AGENTS]
 
 
-def render_agent_progress(container, statuses, timings):
-    """Render the 5-agent progress card. statuses: dict of node->state."""
-    rows_html = ""
-    for key, name, desc in AGENTS:
+def render_progress(container, statuses, current_substeps, timings):
+    """Render the live progress card."""
+    rows = []
+    for key, name, substeps in AGENTS:
         s = statuses.get(key, "pending")
         if s == "done":
-            icon, color = "●", "#34d399"
+            icon, color, row_cls = "●", "#34d399", ""
         elif s == "running":
-            icon, color = "◐", "#4b6bfb"
+            icon, color, row_cls = "◐", "#4b6bfb", "agent-running"
         else:
-            icon, color = "○", "#4b5563"
+            icon, color, row_cls = "○", "#4b5563", ""
+        desc = current_substeps.get(key) or (substeps[0] if s == "pending" else "Done")
+        if s == "done":
+            desc = "Done"
         t = timings.get(key, "")
         t_html = f'<span class="agent-time">{t}</span>' if t else ""
-        rows_html += (
-            f'<div class="agent-row">'
+        rows.append(
+            f'<div class="agent-row {row_cls}">'
             f'<span class="agent-status" style="color:{color};">{icon}</span>'
             f'<span class="agent-name">{name}</span>'
             f'<span class="agent-desc">{desc}</span>'
             f'{t_html}</div>'
         )
-    container.markdown(rows_html, unsafe_allow_html=True)
+    container.markdown("".join(rows), unsafe_allow_html=True)
 
 
 # ── Render results ──────────────────────────────────────────────────────
@@ -266,32 +328,48 @@ if run:
         st.stop()
 
     st.markdown('<div class="section-h">Pipeline Progress</div>', unsafe_allow_html=True)
+    progress_bar = st.progress(0, text="Starting 5-agent pipeline…")
     progress_box = st.empty()
+
     statuses = {}
     timings = {}
-
-    # Show all pending initially
-    render_agent_progress(progress_box, statuses, timings)
+    substeps = {}
+    render_progress(progress_box, statuses, substeps, timings)
 
     result = {}
-    start_times = {}
     pipeline_start = time.time()
+    completed = 0
+    total = len(AGENT_KEYS)
+
+    # Mark first agent as running immediately for visual feedback
+    statuses[AGENT_KEYS[0]] = "running"
+    substeps[AGENT_KEYS[0]] = AGENTS[0][2][0]
+    render_progress(progress_box, statuses, substeps, timings)
 
     try:
         for event in graph.stream({"ticker": ticker}, stream_mode="updates"):
             for node_name, node_output in event.items():
-                # node_name is "filings", "news", etc.
-                if node_name in {n[0] for n in AGENTS}:
+                if node_name in AGENT_KEYS:
                     elapsed = time.time() - pipeline_start
                     statuses[node_name] = "done"
                     timings[node_name] = f"{elapsed:.1f}s"
-                    # mark next pending agent as running for visual feedback
-                    for key, _, _ in AGENTS:
-                        if statuses.get(key) is None:
-                            statuses[key] = "running"
-                            break
-                    render_agent_progress(progress_box, statuses, timings)
-                # accumulate node output into result
+                    completed += 1
+                    # Update progress bar
+                    pct = int((completed / total) * 100)
+                    progress_bar.progress(pct, text=f"{completed}/{total} agents complete · {elapsed:.1f}s elapsed")
+                    # Mark next pending as running
+                    next_idx = AGENT_KEYS.index(node_name) + 1
+                    if next_idx < total:
+                        next_key = AGENT_KEYS[next_idx]
+                        if statuses.get(next_key) is None:
+                            statuses[next_key] = "running"
+                            substeps[next_key] = AGENTS[next_idx][2][0]
+                    # Mark any other parallel-running pending as running
+                    for k in AGENT_KEYS:
+                        if statuses.get(k) is None:
+                            # Don't mark editor early — keep order
+                            pass
+                    render_progress(progress_box, statuses, substeps, timings)
                 if isinstance(node_output, dict):
                     for k, v in node_output.items():
                         if k == "errors":
@@ -299,17 +377,19 @@ if run:
                         else:
                             result[k] = v
 
-        # Mark anything still "running" as done
-        for key, _, _ in AGENTS:
-            if statuses.get(key) == "running":
-                statuses[key] = "done"
-        render_agent_progress(progress_box, statuses, timings)
+        # Final state
+        for k in AGENT_KEYS:
+            if statuses.get(k) != "done":
+                statuses[k] = "done"
+        progress_bar.progress(100, text=f"All agents complete · {time.time() - pipeline_start:.1f}s total")
+        render_progress(progress_box, statuses, substeps, timings)
+        time.sleep(0.3)
+        progress_bar.empty()
 
     except Exception as e:
         st.error(f"Pipeline failed: {e}")
         st.stop()
 
-    # Always ensure ticker is in the result
     result["ticker"] = ticker
 
     company = result.get("company_name") or ticker
@@ -330,7 +410,8 @@ if run:
             f"<span style='color:#9ca3af;font-size:1.1rem;font-weight:500;'>"
             f"({ticker})</span></h2>"
             f"<div style='color:#9ca3af;font-size:0.85rem;margin-top:4px;'>"
-            f"{fins.get('sector') or ''}{' · ' + fins.get('industry') if fins.get('industry') else ''}</div>",
+            f"{fins.get('sector') or ''}"
+            f"{' · ' + fins.get('industry') if fins.get('industry') else ''}</div>",
             unsafe_allow_html=True,
         )
     with h_right:
@@ -340,7 +421,7 @@ if run:
             unsafe_allow_html=True,
         )
 
-    # ── KPI tiles ──────────────────────────────────────────────
+    # ── KPI tiles (clickable expanders) ────────────────────────
     upside = val.get("upside_pct")
     upside_str = f"{upside:+.1f}%" if isinstance(upside, (int, float)) else "—"
     upside_color = "#34d399" if (isinstance(upside, (int, float)) and upside > 0) else (
@@ -348,34 +429,89 @@ if run:
     )
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(
-        kpi_card("Current Price",
-                 f"${val.get('current_price'):.2f}" if val.get('current_price') else "—"),
-        unsafe_allow_html=True,
-    )
-    fv = val.get("blended_fair_value")
-    dcf = val.get("dcf_fair_value"); comp = val.get("comp_fair_value")
-    sub = ""
-    if dcf and comp:
-        sub = f"DCF ${dcf} · Comps ${comp}"
-    elif dcf:
-        sub = f"DCF only: ${dcf}"
-    elif comp:
-        sub = f"Comps only: ${comp}"
-    c2.markdown(kpi_card("Fair Value (blended)", f"${fv:.2f}" if fv else "—", sub),
-                unsafe_allow_html=True)
-    c3.markdown(
-        f'<div class="kpi"><div class="kpi-label">Upside</div>'
-        f'<div class="kpi-value" style="color:{upside_color} !important;">{upside_str}</div>'
-        f'<div class="kpi-sub">vs current price</div></div>',
-        unsafe_allow_html=True,
-    )
-    rs_display = f"{risk_score}/10" if risk_score else "—"
-    c4.markdown(kpi_card("Risk Score", rs_display, risk_label(risk_score)),
-                unsafe_allow_html=True)
+    with c1:
+        st.markdown(
+            kpi_card("Current Price",
+                     f"${val.get('current_price'):.2f}" if val.get('current_price') else "—"),
+            unsafe_allow_html=True,
+        )
+        with st.expander("Why this price?"):
+            st.markdown(
+                f"<div class='body'>Live mid-quote from Yahoo Finance. "
+                f"Market cap: {fmt_money(fins.get('market_cap'))}. "
+                f"Trailing P/E: {fins.get('trailing_pe'):.1f}x" if fins.get('trailing_pe') else "Trailing P/E: —",
+                unsafe_allow_html=True,
+            )
+
+    with c2:
+        fv = val.get("blended_fair_value")
+        dcf = val.get("dcf_fair_value"); comp = val.get("comp_fair_value")
+        sub = ""
+        if dcf and comp: sub = f"DCF ${dcf} · Comps ${comp}"
+        elif dcf: sub = f"DCF only: ${dcf}"
+        elif comp: sub = f"Comps only: ${comp}"
+        st.markdown(kpi_card("Fair Value", f"${fv:.2f}" if fv else "—", sub),
+                    unsafe_allow_html=True)
+        with st.expander("How was this calculated?"):
+            assumptions = val.get("assumptions") or {}
+            st.markdown(
+                f"<div class='body'><b>DCF assumptions:</b><br>"
+                f"• WACC: {(assumptions.get('wacc') or 0)*100:.1f}%<br>"
+                f"• Growth: {(assumptions.get('growth') or 0)*100:.1f}%<br>"
+                f"• Terminal multiple: {assumptions.get('terminal_multiple') or '—'}x<br>"
+                f"• Sector P/E (for comps): {assumptions.get('sector_pe') or '—'}<br><br>"
+                f"<b>Blended:</b> average of DCF and Comps methods.</div>",
+                unsafe_allow_html=True,
+            )
+
+    with c3:
+        st.markdown(
+            f'<div class="kpi"><div class="kpi-label">Upside</div>'
+            f'<div class="kpi-value" style="color:{upside_color} !important;">{upside_str}</div>'
+            f'<div class="kpi-sub">vs current price</div></div>',
+            unsafe_allow_html=True,
+        )
+        with st.expander("What does this mean?"):
+            if isinstance(upside, (int, float)):
+                direction = "above" if upside > 0 else "below"
+                st.markdown(
+                    f"<div class='body'>Blended fair value is "
+                    f"<b>{abs(upside):.1f}% {direction}</b> the current price. "
+                    f"Decision thresholds:<br>"
+                    f"• Upside &gt; 15% AND risk score ≤ 5 → <b>BUY</b><br>"
+                    f"• Upside &lt; -10% OR risk score ≥ 8 → <b>SELL</b><br>"
+                    f"• Otherwise → <b>HOLD</b></div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown("<div class='body'>Upside unavailable.</div>", unsafe_allow_html=True)
+
+    with c4:
+        rs_display = f"{risk_score}/10" if risk_score else "—"
+        st.markdown(kpi_card("Risk Score", rs_display, risk_label(risk_score)),
+                    unsafe_allow_html=True)
+        with st.expander("Why this risk score?"):
+            if risks:
+                sev_counts = {"high": 0, "medium": 0, "low": 0}
+                for r in risks:
+                    sev = (r.get("severity") or "medium").lower()
+                    if sev in sev_counts: sev_counts[sev] += 1
+                st.markdown(
+                    f"<div class='body'>{len(risks)} risks identified: "
+                    f"<span style='color:#f87171'><b>{sev_counts['high']} high</b></span>, "
+                    f"<span style='color:#fbbf24'><b>{sev_counts['medium']} medium</b></span>, "
+                    f"<span style='color:#34d399'><b>{sev_counts['low']} low</b></span>.<br><br>"
+                    f"Score (1=safe, 10=avoid) blends count, severity mix, and "
+                    f"source diversity across filings, news, and valuation signals."
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown("<div class='body'>No risks identified.</div>", unsafe_allow_html=True)
 
     # ── Charts row ─────────────────────────────────────────────
     st.markdown('<div class="section-h">Visuals</div>', unsafe_allow_html=True)
+
     chart_left, chart_right = st.columns([1.4, 1])
 
     with chart_left:
@@ -388,10 +524,11 @@ if run:
         if price_history:
             df = pd.DataFrame(price_history)
             df["date"] = pd.to_datetime(df["date"])
+            min_p, max_p = df["close"].min(), df["close"].max()
             chart = (
                 alt.Chart(df)
                 .mark_area(
-                    line={"color": "#6d8bff"},
+                    line={"color": "#6d8bff", "strokeWidth": 2},
                     color=alt.Gradient(
                         gradient="linear",
                         stops=[
@@ -404,11 +541,12 @@ if run:
                 .encode(
                     x=alt.X("date:T", title=None, axis=alt.Axis(labelColor="#9ca3af", grid=False)),
                     y=alt.Y("close:Q", title=None,
-                            scale=alt.Scale(zero=False),
+                            scale=alt.Scale(domain=[min_p * 0.95, max_p * 1.02]),
                             axis=alt.Axis(labelColor="#9ca3af", grid=True, gridColor="#1f2937")),
-                    tooltip=["date:T", "close:Q"],
+                    tooltip=[alt.Tooltip("date:T", title="Date"),
+                             alt.Tooltip("close:Q", title="Close", format="$.2f")],
                 )
-                .properties(height=260, background="transparent")
+                .properties(height=280, background="transparent")
                 .configure_view(strokeWidth=0)
             )
             st.altair_chart(chart, use_container_width=True)
@@ -432,7 +570,7 @@ if run:
             bdf = pd.DataFrame(bars)
             bar_chart = (
                 alt.Chart(bdf)
-                .mark_bar(cornerRadiusEnd=4)
+                .mark_bar(cornerRadiusEnd=4, size=42)
                 .encode(
                     x=alt.X("method:N", title=None, sort=None,
                             axis=alt.Axis(labelColor="#e5e7eb", labelAngle=0)),
@@ -442,14 +580,112 @@ if run:
                         domain=["Current", "DCF", "Comps", "Blended"],
                         range=["#9ca3af", "#4b6bfb", "#8b5cf6", "#34d399"],
                     ), legend=None),
-                    tooltip=["method", "value"],
+                    tooltip=[alt.Tooltip("method"), alt.Tooltip("value:Q", format="$.2f")],
                 )
-                .properties(height=260, background="transparent")
+                .properties(height=280, background="transparent")
                 .configure_view(strokeWidth=0)
             )
             st.altair_chart(bar_chart, use_container_width=True)
         else:
             st.markdown("<div class='body'>Valuation data unavailable.</div>", unsafe_allow_html=True)
+
+    # ── Second visual row: margins gauges + cash vs debt + risk donut ─
+    v1, v2, v3 = st.columns(3)
+
+    with v1:
+        st.markdown(
+            "<div style='color:#9ca3af;font-size:0.78rem;font-weight:700;"
+            "letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;'>"
+            "Margins</div>",
+            unsafe_allow_html=True,
+        )
+        m_data = []
+        if fins.get("gross_margin") is not None:
+            m_data.append({"type": "Gross", "value": fins["gross_margin"] * 100})
+        if fins.get("operating_margin") is not None:
+            m_data.append({"type": "Operating", "value": fins["operating_margin"] * 100})
+        if m_data:
+            mdf = pd.DataFrame(m_data)
+            mchart = (
+                alt.Chart(mdf)
+                .mark_bar(cornerRadiusEnd=4, size=36)
+                .encode(
+                    y=alt.Y("type:N", title=None, sort=None,
+                            axis=alt.Axis(labelColor="#e5e7eb")),
+                    x=alt.X("value:Q", title=None,
+                            scale=alt.Scale(domain=[0, 100]),
+                            axis=alt.Axis(labelColor="#9ca3af", gridColor="#1f2937")),
+                    color=alt.value("#34d399"),
+                    tooltip=[alt.Tooltip("type"), alt.Tooltip("value:Q", format=".1f", title="%")],
+                )
+                .properties(height=200, background="transparent")
+                .configure_view(strokeWidth=0)
+            )
+            st.altair_chart(mchart, use_container_width=True)
+        else:
+            st.markdown("<div class='body'>Margin data unavailable.</div>", unsafe_allow_html=True)
+
+    with v2:
+        st.markdown(
+            "<div style='color:#9ca3af;font-size:0.78rem;font-weight:700;"
+            "letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;'>"
+            "Cash vs Debt</div>",
+            unsafe_allow_html=True,
+        )
+        cd_data = []
+        if fins.get("cash") is not None: cd_data.append({"type": "Cash", "value": fins["cash"]})
+        if fins.get("total_debt") is not None: cd_data.append({"type": "Debt", "value": fins["total_debt"]})
+        if cd_data:
+            cdf = pd.DataFrame(cd_data)
+            cdchart = (
+                alt.Chart(cdf)
+                .mark_bar(cornerRadiusEnd=4, size=42)
+                .encode(
+                    x=alt.X("type:N", title=None, sort=None,
+                            axis=alt.Axis(labelColor="#e5e7eb", labelAngle=0)),
+                    y=alt.Y("value:Q", title=None,
+                            axis=alt.Axis(labelColor="#9ca3af", gridColor="#1f2937")),
+                    color=alt.Color("type:N", scale=alt.Scale(
+                        domain=["Cash", "Debt"], range=["#34d399", "#f87171"]), legend=None),
+                    tooltip=[alt.Tooltip("type"), alt.Tooltip("value:Q", format="$,.0f", title="$M")],
+                )
+                .properties(height=200, background="transparent")
+                .configure_view(strokeWidth=0)
+            )
+            st.altair_chart(cdchart, use_container_width=True)
+        else:
+            st.markdown("<div class='body'>Balance sheet data unavailable.</div>", unsafe_allow_html=True)
+
+    with v3:
+        st.markdown(
+            "<div style='color:#9ca3af;font-size:0.78rem;font-weight:700;"
+            "letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;'>"
+            "Risk Severity Mix</div>",
+            unsafe_allow_html=True,
+        )
+        if risks:
+            sev_counts = {"high": 0, "medium": 0, "low": 0}
+            for r in risks:
+                sev = (r.get("severity") or "medium").lower()
+                if sev in sev_counts: sev_counts[sev] += 1
+            rdf = pd.DataFrame([{"severity": k, "count": v} for k, v in sev_counts.items() if v > 0])
+            donut = (
+                alt.Chart(rdf)
+                .mark_arc(innerRadius=50, outerRadius=85)
+                .encode(
+                    theta=alt.Theta("count:Q"),
+                    color=alt.Color("severity:N", scale=alt.Scale(
+                        domain=["high", "medium", "low"],
+                        range=["#f87171", "#fbbf24", "#34d399"],
+                    ), legend=alt.Legend(orient="bottom", labelColor="#e5e7eb", title=None)),
+                    tooltip=["severity", "count"],
+                )
+                .properties(height=200, background="transparent")
+                .configure_view(strokeWidth=0)
+            )
+            st.altair_chart(donut, use_container_width=True)
+        else:
+            st.markdown("<div class='body'>No risks to chart.</div>", unsafe_allow_html=True)
 
     # ── Two-column body ────────────────────────────────────────
     left, right = st.columns([1.2, 1])
@@ -470,6 +706,23 @@ if run:
             st.markdown("")
             st.markdown(kpi_card("Revenue Growth (YoY)", fmt_pct(fins.get("revenue_growth_yoy"))), unsafe_allow_html=True)
 
+        with st.expander("More fundamentals detail"):
+            d1, d2 = st.columns(2)
+            d1.markdown(
+                f"<div class='detail-card'><div class='detail-label'>Market Cap</div>"
+                f"<div class='detail-value'>{fmt_money(fins.get('market_cap'))}</div></div>"
+                f"<div class='detail-card'><div class='detail-label'>Gross Margin</div>"
+                f"<div class='detail-value'>{fmt_pct(fins.get('gross_margin'))}</div></div>",
+                unsafe_allow_html=True,
+            )
+            d2.markdown(
+                f"<div class='detail-card'><div class='detail-label'>Cash on Hand</div>"
+                f"<div class='detail-value'>{fmt_money(fins.get('cash'))}</div></div>"
+                f"<div class='detail-card'><div class='detail-label'>Trailing P/E</div>"
+                f"<div class='detail-value'>{fins.get('trailing_pe'):.1f}x" if fins.get('trailing_pe') else "—",
+                unsafe_allow_html=True,
+            )
+
         st.markdown('<div class="section-h">Valuation Commentary</div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="body">{result.get("valuation_notes") or "—"}</div>',
@@ -483,7 +736,7 @@ if run:
     with right:
         st.markdown('<div class="section-h">Key Risks</div>', unsafe_allow_html=True)
         if risks:
-            for r in risks[:5]:
+            for i, r in enumerate(risks[:6]):
                 sev = (r.get("severity") or "medium").lower()
                 if sev not in ("low", "medium", "high"):
                     sev = "medium"
@@ -492,7 +745,7 @@ if run:
                     f'<span class="risk-pill risk-{sev}">{sev}</span>'
                     f'<span class="risk-card-text">{r.get("risk", "")}</span>'
                     f'<div style="color:#9ca3af;font-size:0.72rem;margin-top:6px;">'
-                    f'source: {r.get("source", "—")}</div></div>',
+                    f'Source: {r.get("source", "—")}</div></div>',
                     unsafe_allow_html=True,
                 )
         else:
@@ -507,23 +760,92 @@ if run:
             f'<div class="body" style="margin-top:10px;">{result.get("news_summary") or "—"}</div>',
             unsafe_allow_html=True,
         )
-        for s in (result.get("news_sources") or [])[:4]:
+
+        st.markdown(
+            "<div style='color:#9ca3af;font-size:0.78rem;font-weight:700;"
+            "letter-spacing:0.1em;text-transform:uppercase;margin:14px 0 8px 0;'>"
+            "Recent headlines (click to read)</div>",
+            unsafe_allow_html=True,
+        )
+        for s in (result.get("news_sources") or [])[:6]:
             title = s.get("title", "")
             url = s.get("url") or "#"
             pub = s.get("publisher") or ""
             st.markdown(
-                f'<div class="news-card"><a href="{url}" target="_blank">{title}</a>'
-                f'<div class="news-pub">{pub}</div></div>',
+                f'<div class="news-card">'
+                f'<a href="{url}" target="_blank" rel="noopener">{title}</a>'
+                f'<div class="news-pub">{pub}</div>'
+                f'<div class="news-cta">Read article →</div></div>',
                 unsafe_allow_html=True,
             )
 
-    # ── Expanders ──────────────────────────────────────────────
+    # ── Memo + readable raw state ──────────────────────────────
+    st.markdown('<div class="section-h">Deep Dive</div>', unsafe_allow_html=True)
     if result.get("memo_markdown"):
-        with st.expander("Full memo (markdown)"):
-            st.markdown(result["memo_markdown"])
+        with st.expander("Full investment memo", expanded=False):
+            st.markdown(
+                f"<div class='memo-box body'>{result['memo_markdown']}</div>",
+                unsafe_allow_html=True,
+            )
 
-    with st.expander("Raw agent state (debug)"):
-        st.json({k: v for k, v in result.items() if k != "memo_markdown"})
+    with st.expander("Agent outputs (structured view)"):
+        tabs = st.tabs(["Filings", "News", "Valuation", "Risk", "Editor"])
+        with tabs[0]:
+            st.markdown('<div class="body">', unsafe_allow_html=True)
+            for k, v in (fins or {}).items():
+                if v is None: continue
+                if isinstance(v, float) and 0 < v < 1:
+                    v = f"{v*100:.2f}%"
+                elif isinstance(v, (int, float)):
+                    v = f"{v:,.2f}"
+                st.markdown(
+                    f"<div class='detail-card'><div class='detail-label'>{k.replace('_', ' ').title()}</div>"
+                    f"<div class='detail-value'>{v}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
+        with tabs[1]:
+            st.markdown(f"<div class='body'><b>Sentiment:</b> {sentiment}<br/><br/>"
+                        f"{result.get('news_summary')}</div>", unsafe_allow_html=True)
+            for s in (result.get("news_sources") or []):
+                st.markdown(
+                    f'<div class="news-card">'
+                    f'<a href="{s.get("url") or "#"}" target="_blank">{s.get("title", "")}</a>'
+                    f'<div class="news-pub">{s.get("publisher") or ""}</div></div>',
+                    unsafe_allow_html=True,
+                )
+        with tabs[2]:
+            for k, v in (val or {}).items():
+                if k == "assumptions":
+                    st.markdown(f"<div class='detail-card'><div class='detail-label'>Assumptions</div>"
+                                f"<div class='detail-value' style='font-size:0.9rem;'>"
+                                f"{', '.join(f'{kk}: {vv}' for kk, vv in (v or {}).items() if vv is not None)}"
+                                f"</div></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<div class='detail-card'><div class='detail-label'>{k.replace('_', ' ').title()}</div>"
+                        f"<div class='detail-value'>{v}</div></div>",
+                        unsafe_allow_html=True,
+                    )
+            st.markdown(f"<div class='body' style='margin-top:10px;'>{result.get('valuation_notes', '')}</div>",
+                        unsafe_allow_html=True)
+        with tabs[3]:
+            for r in risks:
+                sev = (r.get("severity") or "medium").lower()
+                st.markdown(
+                    f'<div class="risk-card">'
+                    f'<span class="risk-pill risk-{sev}">{sev}</span>'
+                    f'<span class="risk-card-text">{r.get("risk", "")}</span>'
+                    f'<div style="color:#9ca3af;font-size:0.72rem;margin-top:6px;">'
+                    f'Source: {r.get("source", "—")}</div></div>',
+                    unsafe_allow_html=True,
+                )
+        with tabs[4]:
+            st.markdown(f"<div class='body'><b>Recommendation:</b> {rec}<br/><br/>"
+                        f"<b>Upside threshold logic:</b><br/>"
+                        f"BUY if upside &gt; 15% AND risk ≤ 5<br/>"
+                        f"SELL if upside &lt; -10% OR risk ≥ 8<br/>"
+                        f"Else HOLD</div>", unsafe_allow_html=True)
 
     if result.get("errors"):
         with st.expander(f"Agent warnings ({len(result['errors'])})"):
@@ -542,13 +864,16 @@ else:
             <div style="color:#9ca3af;font-size:0.95rem;">
                 Five specialized AI agents will research the company and produce a
                 one-page investment memo in roughly 20 seconds.
+                <br/><br/>
+                Try <b style="color:#fff;">NVDA</b>, <b style="color:#fff;">AAPL</b>,
+                <b style="color:#fff;">MSFT</b>, <b style="color:#fff;">TSLA</b>.
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-# ── Footer (was sidebar) ─────────────────────────────────────────────────
+# ── Footer ───────────────────────────────────────────────────────────────
 st.markdown(
     """
     <div class="footer">
@@ -575,8 +900,8 @@ st.markdown(
                 <h4>Stack</h4>
                 <div class="footer-text">
                     Python · LangGraph<br/>
-                    Gemini 2.0 Flash<br/>
-                    yfinance · SEC EDGAR<br/>
+                    Gemini 2.5 Flash<br/>
+                    yfinance · Yahoo News<br/>
                     Streamlit · Altair
                 </div>
             </div>
