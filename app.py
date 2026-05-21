@@ -82,35 +82,62 @@ h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
   color: var(--ink) !important; font-family: var(--sans); letter-spacing: -0.01em;
 }
 
-.masthead {
-  margin: -3rem -1rem 20px -1rem; padding: 14px 32px 16px 32px;
-  background: var(--paper); border-bottom: 1px solid var(--rule-strong);
+/* Top bar — minimal, FT-style */
+.topbar {
   display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px; margin: -3rem -1rem 0 -1rem;
+  border-bottom: 1px solid var(--rule); background: var(--paper);
 }
-.masthead img { height: 52px; display: block; }
-.masthead-right {
-  font-family: var(--sans); font-size: 12px; color: var(--ink-2);
-  text-align: right; line-height: 1.55;
-  background: var(--paper-card); border: 1px solid var(--rule-strong);
-  border-radius: 4px; padding: 10px 14px;
+.topbar-left { display: flex; align-items: center; gap: 28px; }
+.topbar img { height: 26px; display: block; }
+.topbar-nav { display: flex; gap: 22px; }
+.topbar-nav a {
+  font-size: 12.5px; color: var(--ink); text-decoration: none; font-weight: 500;
 }
-.masthead-right .credit-by {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
-  color: var(--ink-3); font-weight: 500;
+.topbar-nav a:hover { color: var(--coral); }
+.topbar-right { display: flex; gap: 14px; align-items: center; }
+.ticker-strip {
+  display: flex; gap: 16px; font-family: var(--mono); font-size: 11px;
+  color: var(--ink); padding-right: 4px;
 }
-.masthead-right .credit-name {
-  font-family: var(--serif); font-size: 22px; font-style: italic;
-  color: var(--ink); font-weight: 400; line-height: 1.1; margin: 2px 0 4px 0;
-  letter-spacing: -0.01em;
-}
-.masthead-right .credit-meta {
-  color: var(--ink-2); font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
-}
-.tagline {
+.ts-sym { font-weight: 700; letter-spacing: 0.04em; }
+.ts-up { color: var(--bull); }
+.ts-down { color: var(--bear); }
+.credit-chip {
   font-family: var(--sans); font-size: 11px; color: var(--ink-2);
-  text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600;
-  margin-top: 4px;
+  background: var(--paper-card); border: 1px solid var(--rule);
+  border-radius: 4px; padding: 6px 12px; line-height: 1.4;
+}
+.credit-chip b {
+  font-family: var(--serif); font-style: italic; font-size: 15px;
+  color: var(--ink); font-weight: 400; letter-spacing: -0.01em;
+}
+
+/* Hero */
+.hero {
+  padding: 64px 24px 40px 24px; max-width: 1200px; margin: 0 auto;
+}
+.eyebrow {
+  font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--ink-3); margin-bottom: 24px;
+  display: flex; align-items: center; gap: 10px;
+}
+.eyebrow::before {
+  content: ''; width: 10px; height: 10px; background: var(--coral);
+  display: inline-block;
+}
+.hero h1 {
+  font-family: var(--serif) !important; font-weight: 400 !important;
+  font-size: 88px !important; line-height: 0.95 !important;
+  letter-spacing: -0.035em !important; margin: 0 !important;
+  max-width: 1100px; color: var(--ink) !important;
+}
+.hero h1 em { font-style: italic; color: var(--ink-2); }
+.hero h1 .accent { color: var(--coral); font-style: italic; }
+.hero-sub {
+  margin-top: 28px; max-width: 560px;
+  font-family: var(--serif); font-size: 22px; font-style: italic;
+  line-height: 1.3; color: var(--ink-2); letter-spacing: -0.01em;
 }
 
 .section {
@@ -387,24 +414,57 @@ div[data-testid="stExpander"] details summary:hover { background: var(--paper-di
   margin-bottom: 10px;
 }
 
+/* Three-column "how it works" */
+.three {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink);
+  margin: 48px -1rem 0 -1rem;
+}
+.three > div { padding: 36px 32px; border-right: 1px solid var(--rule); }
+.three > div:last-child { border-right: none; }
+.three .num {
+  font-family: var(--serif); font-size: 64px; line-height: 1; color: var(--coral);
+  font-style: italic; letter-spacing: -0.03em;
+}
+.three h3 {
+  font-family: var(--sans) !important; font-size: 18px !important;
+  font-weight: 600 !important; margin: 14px 0 6px !important;
+  letter-spacing: -0.01em !important; color: var(--ink) !important;
+}
+.three p {
+  font-size: 14px !important; line-height: 1.55; color: var(--ink-2) !important;
+  margin: 0 !important; max-width: 320px;
+}
+
+/* Salmon banner */
+.banner {
+  background: var(--salmon); padding: 64px 32px; text-align: center;
+  margin: 0 -1rem; position: relative;
+}
+.banner .stamp {
+  display: inline-block; transform: rotate(-3deg);
+  border: 2px solid var(--ink); padding: 6px 18px;
+  font-family: var(--mono); font-size: 12px; text-transform: uppercase;
+  letter-spacing: 0.1em; margin-bottom: 24px; background: var(--paper);
+  color: var(--ink);
+}
+.banner h2 {
+  font-family: var(--serif) !important; font-weight: 400 !important;
+  font-size: 60px !important; letter-spacing: -0.03em !important;
+  line-height: 1.0 !important; margin: 0 0 28px !important; color: var(--ink) !important;
+}
+
 /* Footer */
 .footer {
-  margin-top: 48px; padding: 24px 0 16px 0;
-  border-top: 1px solid var(--rule-strong); color: var(--ink-2);
+  margin: 0 -1rem; padding: 24px 32px; display: flex;
+  justify-content: space-between; align-items: center;
+  border-top: 1px solid var(--rule); font-family: var(--mono);
+  font-size: 11px; color: var(--ink-3); text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
-.footer-grid {
-  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; margin-bottom: 20px;
-}
-.footer h4 {
-  color: var(--ink) !important; font-family: var(--sans); font-size: 11px;
-  text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 8px;
-}
-.footer-text { color: var(--ink-2); font-size: 13px; line-height: 1.7; }
-.footer-bottom {
-  text-align: center; padding-top: 16px; border-top: 1px solid var(--rule);
-  color: var(--ink-3); font-family: var(--mono); font-size: 11px;
-  letter-spacing: 0.05em;
-}
+.footer a { color: var(--ink-3); text-decoration: none; }
+.footer a:hover { color: var(--coral); }
+.footer-links { display: flex; gap: 24px; }
 </style>""",
     unsafe_allow_html=True,
 )
@@ -413,27 +473,68 @@ div[data-testid="stExpander"] details summary:hover { background: var(--paper-di
 if "result" not in st.session_state:
     st.session_state.result = None
 
-# ── Masthead ────────────────────────────────────────────────────────────
+# ── Live ticker strip data (cached for 5 min) ───────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
+def _index_strip():
+    import yfinance as yf
+    out = []
+    for sym, label in [("^GSPC", "SPX"), ("^NDX", "NDX"), ("^VIX", "VIX")]:
+        try:
+            t = yf.Ticker(sym).info
+            chg = t.get("regularMarketChangePercent")
+            if chg is None:
+                prev = t.get("previousClose"); curr = t.get("regularMarketPrice")
+                if prev and curr: chg = ((curr - prev) / prev) * 100
+            cls = "ts-up" if (chg or 0) >= 0 else "ts-down"
+            sign = "+" if (chg or 0) >= 0 else "−"
+            out.append(f'<span><span class="ts-sym">{label}</span> '
+                       f'<span class="{cls}">{sign}{abs(chg or 0):.2f}%</span></span>')
+        except Exception:
+            out.append(f'<span><span class="ts-sym">{label}</span> '
+                       f'<span style="color:var(--ink-3)">—</span></span>')
+    return "".join(out)
+
+
+# ── Top bar ─────────────────────────────────────────────────────────────
 logo_html = (
     f'<img src="{LOGO_URI}" alt="LoliFin">' if LOGO_URI
-    else '<span style="font-family:var(--serif);font-size:32px;">LoliFin</span>'
+    else '<span style="font-family:var(--serif);font-size:26px;">LoliFin</span>'
 )
 st.markdown(
     f"""
-    <div class="masthead">
-        <div>
+    <div class="topbar">
+        <div class="topbar-left">
             {logo_html}
-            <div class="tagline">Agentic equity research</div>
+            <nav class="topbar-nav">
+                <a href="#research">Research</a>
+                <a href="#how">How it works</a>
+                <a href="https://github.com/Sai-Kanagat/lolifin" target="_blank">Code</a>
+            </nav>
         </div>
-        <div class="masthead-right">
-            <div class="credit-by">A project by</div>
-            <div class="credit-name">Iolanda Costa</div>
-            <div class="credit-meta">M.Sc. Finance &amp; AI · Bologna Business School</div>
+        <div class="topbar-right">
+            <div class="ticker-strip">{_index_strip()}</div>
+            <div class="credit-chip">A project by <b>Lolanda Costa</b></div>
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+# ── Hero (only shown when no result yet) ────────────────────────────────
+if not st.session_state.get("result"):
+    st.markdown(
+        """
+        <div class="hero" id="research">
+            <div class="eyebrow">Agentic equity research · v1.0</div>
+            <h1>Equity research,<br><em>without the</em> <span class="accent">analyst hours.</span></h1>
+            <div class="hero-sub">
+                LoliFin reads the filings, models the business, and writes the memo.
+                You ask the follow-up questions.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # ── Input row ────────────────────────────────────────────────────────────
 col_in, col_btn = st.columns([5, 1])
@@ -1050,10 +1151,10 @@ else:
     st.markdown(
         """
         <div class="empty">
-            <div class="empty-title">Equity research, without the analyst hours.</div>
+            <div class="empty-title">Drop in a ticker to begin.</div>
             <div class="empty-body">
-                LoliFin reads the filings, models the business, and writes the memo —
-                in about twenty seconds. Enter a ticker above to begin.
+                Five agents run in sequence — filings, news, valuation, risk, editor —
+                and produce a one-page memo in about twenty seconds.
             </div>
             <div class="empty-tickers">NVDA  ·  AAPL  ·  MSFT  ·  TSLA</div>
         </div>
@@ -1061,43 +1162,52 @@ else:
         unsafe_allow_html=True,
     )
 
-# ── Footer ───────────────────────────────────────────────────────────────
+# ── Three-column "how it works" ─────────────────────────────────────────
 st.markdown(
     """
-    <div class="footer">
-        <div class="footer-grid">
-            <div>
-                <h4>About LoliFin</h4>
-                <div class="footer-text">
-                    A multi-agent AI system that produces equity research memos.
-                    Built as part of a Master's in Finance &amp; AI portfolio at
-                    Bologna Business School.
-                </div>
-            </div>
-            <div>
-                <h4>Pipeline</h4>
-                <div class="footer-text">
-                    1 Filings · fundamentals<br/>
-                    2 News · sentiment<br/>
-                    3 Valuation · DCF + comps<br/>
-                    4 Risk · red flags<br/>
-                    5 Editor · final memo
-                </div>
-            </div>
-            <div>
-                <h4>Stack</h4>
-                <div class="footer-text">
-                    Python · LangGraph<br/>
-                    Gemini 2.5 Flash<br/>
-                    yfinance · Yahoo News<br/>
-                    Streamlit · Altair
-                </div>
-            </div>
+    <section class="three" id="how">
+        <div>
+            <div class="num">01</div>
+            <h3>Drop in a ticker.</h3>
+            <p>The agent pulls fundamentals, recent news, and price history from Yahoo Finance — automatically.</p>
         </div>
-        <div class="footer-bottom">
-            © 2026 Iolanda Costa · LoliFin · For educational purposes only — not investment advice.
+        <div>
+            <div class="num">02</div>
+            <h3>It writes the memo.</h3>
+            <p>A full buy/hold/sell write-up with DCF, comparable multiples, target, and the bear case.</p>
         </div>
-    </div>
+        <div>
+            <div class="num">03</div>
+            <h3>Inspect the work.</h3>
+            <p>Every claim is cited to a source agent. Drill into the structured outputs — filings, news, valuation, risk.</p>
+        </div>
+    </section>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ── Salmon banner ───────────────────────────────────────────────────────
+st.markdown(
+    """
+    <section class="banner">
+        <div class="stamp">Free during beta · No card</div>
+        <h2>Read fewer filings.<br>Have better takes.</h2>
+    </section>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ── Footer ──────────────────────────────────────────────────────────────
+st.markdown(
+    """
+    <footer class="footer">
+        <div>© 2026 LoliFin · A project by Lolanda Costa</div>
+        <div class="footer-links">
+            <a href="#">Disclosures</a>
+            <a href="https://github.com/Sai-Kanagat/lolifin" target="_blank">GitHub</a>
+            <a href="#">Privacy</a>
+        </div>
+    </footer>
     """,
     unsafe_allow_html=True,
 )
