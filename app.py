@@ -8,7 +8,6 @@ from graph import graph
 
 st.set_page_config(
     page_title="lolifin · Equity Research",
-    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -130,7 +129,7 @@ st.markdown(
     """
     <div class="brand-bar">
         <div>
-            <span class="brand-name">📊 lolifin</span>
+            <span class="brand-name">lolifin</span>
             <span class="brand-tag">  ·  Agentic Equity Research</span>
         </div>
         <div class="brand-credit">
@@ -340,14 +339,14 @@ if run:
                     )
 
         # ── Full memo expander ────────────────────────────────────
-        with st.expander("📄 Full memo (markdown)"):
+        with st.expander("Full memo (markdown)"):
             st.markdown(memo)
 
-        with st.expander("🔧 Raw agent state (debug)"):
+        with st.expander("Raw agent state (debug)"):
             st.json({k: v for k, v in result.items() if k != "memo_markdown"})
 
         if result.get("errors"):
-            with st.expander("⚠️ Agent warnings"):
+            with st.expander("Agent warnings"):
                 for e in result["errors"]:
                     st.warning(e)
 
@@ -357,8 +356,7 @@ else:
         """
         <div style="background:#1a1f2e;border:1px solid #2a3142;border-radius:12px;
                     padding:40px;text-align:center;margin-top:1rem;">
-            <div style="font-size:2.5rem;margin-bottom:8px;">📈</div>
-            <div style="color:#fff;font-size:1.1rem;font-weight:600;margin-bottom:6px;">
+            <div style="color:#fff;font-size:1.15rem;font-weight:600;margin-bottom:6px;">
                 Enter a ticker above to generate a memo
             </div>
             <div style="color:#8a93a8;font-size:0.9rem;">
