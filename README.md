@@ -1,4 +1,4 @@
-# lolifin · Agentic AI Equity Research Analyst
+# LoliFin · Agentic AI Equity Research Analyst
 
 A multi-agent pipeline that takes a stock ticker and produces a one-page investment memo (Buy / Hold / Sell, with reasoning, valuation, risks, and citations).
 
