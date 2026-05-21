@@ -71,10 +71,10 @@ def news_agent(state: ResearchState) -> ResearchState:
             ])
             parsed = _extract_json(resp.content) or {}
             sentiment = parsed.get("sentiment") or "neutral"
-            summary = parsed.get("summary") or "Recent headlines summarized below."
+            summary = parsed.get("summary") or ""
         except Exception:
             sentiment = "neutral"
-            summary = "Recent headlines summarized below (LLM unavailable)."
+            summary = ""
 
         return {
             "news_summary": summary,

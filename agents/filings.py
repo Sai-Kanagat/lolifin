@@ -68,8 +68,9 @@ def filings_agent(state: ResearchState) -> ResearchState:
                 HumanMessage(content=f"Company: {financials['company_name']}\nFinancials: {financials}\nBusiness: {biz}"),
             ])
             summary = resp.content.strip()
-        except Exception as e:
-            summary = f"({financials['company_name']} — financial summary unavailable.)"
+        except Exception:
+            # No noisy fallback — just leave blank; the numbers speak.
+            summary = ""
 
         financials["summary"] = summary
 

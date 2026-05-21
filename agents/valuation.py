@@ -75,7 +75,7 @@ def valuation_agent(state: ResearchState) -> ResearchState:
             },
         }
 
-        notes = "Valuation commentary unavailable."
+        notes = ""
         try:
             llm = get_llm(temperature=0.3)
             resp = llm.invoke([

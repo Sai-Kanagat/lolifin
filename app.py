@@ -85,10 +85,16 @@ h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
 }
 .masthead img { height: 56px; display: block; }
 .masthead-right {
-  font-family: var(--sans); font-size: 12px; color: var(--ink-2);
+  font-family: var(--sans); font-size: 13px; color: var(--ink);
   text-align: right; line-height: 1.55;
+  background: var(--paper-card); border: 1px solid var(--rule-strong);
+  border-radius: 4px; padding: 10px 14px;
 }
-.masthead-right b { color: var(--ink); font-weight: 600; }
+.masthead-right b { color: var(--ink); font-weight: 700; }
+.masthead-right .credit-meta {
+  color: var(--ink-2); font-size: 11px; margin-top: 2px;
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+}
 .tagline {
   font-family: var(--sans); font-size: 11px; color: var(--ink-2);
   text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600;
@@ -187,19 +193,19 @@ h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
 .sent-neutral  { color: var(--ink-2); border-color: var(--rule-strong); background: var(--paper-card); }
 .sent-negative { color: var(--bear); border-color: var(--bear); background: var(--bear-soft); }
 
-.news-card {
+/* Whole news card is a clickable anchor */
+a.news-card {
+  display: block; text-decoration: none !important;
   background: var(--paper-card); border: 1px solid var(--rule);
   border-left: 3px solid var(--coral); padding: 12px 14px; margin-bottom: 8px;
-  border-radius: 4px; transition: background 150ms ease;
+  border-radius: 4px; transition: all 150ms ease; color: var(--ink) !important;
 }
-.news-card:hover { background: var(--paper-dim); }
-.news-card a {
-  color: var(--ink) !important; text-decoration: none;
-  font-size: 14px; font-weight: 500; line-height: 1.4;
+a.news-card:hover {
+  background: var(--paper-dim); border-left-color: var(--coral);
+  transform: translateX(2px);
 }
-.news-card a:hover {
-  text-decoration: underline; text-decoration-color: var(--coral);
-  text-underline-offset: 3px;
+a.news-card .news-title {
+  color: var(--ink) !important; font-size: 14px; font-weight: 500; line-height: 1.45;
 }
 .news-pub {
   color: var(--ink-3); font-family: var(--mono); font-size: 11px;
@@ -212,26 +218,23 @@ h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
 
 /* Terminal panel for agent activity */
 .terminal-pane {
-  background: var(--terminal); border: 1px solid #161E18;
-  padding: 14px 18px; font-family: var(--mono); font-size: 12.5px;
-  color: var(--phosphor); border-radius: 4px;
-  background-image: repeating-linear-gradient(
-    0deg, rgba(111,227,154,0.04) 0px, rgba(111,227,154,0.04) 1px,
-    transparent 1px, transparent 3px
-  );
+  background: #0E1410; border: 1px solid #1F2A22;
+  padding: 16px 20px; font-family: var(--mono); font-size: 13.5px;
+  color: #9FF0BC; border-radius: 4px;
 }
+.terminal-pane * { color: #9FF0BC; }
 .agent-row {
-  display: flex; align-items: center; padding: 7px 0;
-  border-bottom: 1px dashed rgba(111,227,154,0.15);
+  display: flex; align-items: center; padding: 9px 0;
+  border-bottom: 1px dashed rgba(159,240,188,0.18);
 }
 .agent-row:last-child { border-bottom: none; }
-.agent-status { width: 22px; font-size: 13px; }
+.agent-status { width: 24px; font-size: 14px; color: #FF5B3C !important; }
 .agent-name {
-  color: var(--phosphor); font-weight: 700; width: 110px;
-  text-transform: uppercase; letter-spacing: 0.06em;
+  color: #FFFFFF !important; font-weight: 700; width: 120px;
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
-.agent-desc { color: rgba(111,227,154,0.7); flex: 1; padding-right: 12px; }
-.agent-time { color: rgba(111,227,154,0.5); min-width: 55px; text-align: right; }
+.agent-desc { color: #B8E8C8 !important; flex: 1; padding-right: 12px; }
+.agent-time { color: #7FCFA0 !important; min-width: 60px; text-align: right; font-weight: 500; }
 @keyframes blink-soft { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 .agent-running .agent-status { animation: blink-soft 800ms ease-in-out infinite; }
 
@@ -252,15 +255,27 @@ h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
 }
 
 /* Buttons */
-.stButton>button {
-  background: var(--ink) !important; color: var(--paper) !important;
-  border: 1px solid var(--ink) !important; border-radius: 4px !important;
-  padding: 0.6rem 1.4rem !important; font-family: var(--sans) !important;
-  font-weight: 500 !important; font-size: 14px !important;
-  letter-spacing: 0.01em; transition: all 120ms ease;
+.stButton>button, .stButton>button p, .stButton>button span,
+.stButton>button div {
+  background: var(--ink) !important;
+  color: #FBF6EE !important;
+  border: 1px solid var(--ink) !important;
+  font-family: var(--sans) !important;
+  font-weight: 600 !important;
 }
-.stButton>button:hover {
-  background: var(--coral) !important; border-color: var(--coral) !important;
+.stButton>button {
+  border-radius: 4px !important;
+  padding: 0.65rem 1.4rem !important;
+  font-size: 14px !important;
+  letter-spacing: 0.02em !important;
+  transition: all 120ms ease;
+  height: auto !important;
+}
+.stButton>button:hover, .stButton>button:hover p,
+.stButton>button:hover span, .stButton>button:hover div {
+  background: var(--coral) !important;
+  border-color: var(--coral) !important;
+  color: #FBF6EE !important;
   transform: translateY(-1px);
 }
 
@@ -269,11 +284,16 @@ div[data-testid="stExpander"] {
   background: var(--paper-card); border: 1px solid var(--rule);
   border-radius: 4px; margin: 6px 0;
 }
-div[data-testid="stExpander"] summary,
+/* Only style the text — leave the chevron icon's font alone */
 div[data-testid="stExpander"] summary p,
-.streamlit-expanderHeader, .streamlit-expanderHeader p {
+div[data-testid="stExpander"] summary span:not([data-testid*="Icon"]):not([class*="icon"]) {
   color: var(--ink) !important; font-family: var(--sans) !important;
   font-size: 13px !important; font-weight: 500 !important;
+}
+/* Hide the raw-text material icon names if they leak through */
+div[data-testid="stExpander"] [data-testid="stExpanderToggleIcon"] {
+  font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+  color: var(--ink-2) !important;
 }
 div[data-testid="stExpander"] details summary:hover { background: var(--paper-dim); }
 
@@ -369,8 +389,8 @@ st.markdown(
             <div class="tagline">Agentic equity research</div>
         </div>
         <div class="masthead-right">
-            A project by <b>Iolanda Costa</b><br>
-            <span style="color:var(--ink-3);">M.Sc. Finance &amp; AI · Bologna Business School</span>
+            A project by <b>Iolanda Costa</b>
+            <div class="credit-meta">M.Sc. Finance &amp; AI · Bologna Business School</div>
         </div>
     </div>
     """,
@@ -420,17 +440,21 @@ def risk_label(score):
     return "elevated"
 
 
-# Altair chart helper — consistent paper theme + interactivity
+# Altair chart helper — consistent paper theme + interactivity + padding
 def paper_chart(chart):
     return (
         chart
         .configure_view(strokeWidth=0, fill="#FBF6EE")
         .configure_axis(
             labelFont="JetBrains Mono", titleFont="Geist",
-            labelColor="#5C544A", titleColor="#1A1714",
-            gridColor="rgba(26,23,20,0.08)", domainColor="#1A1714",
-            tickColor="#5C544A",
+            labelColor="#5C544A", titleColor="#1A1714", labelFontSize=11,
+            labelPadding=6, gridColor="rgba(26,23,20,0.08)",
+            domainColor="#1A1714", tickColor="#5C544A",
         )
+        .configure_legend(
+            labelFont="Geist", labelColor="#1A1714", titleColor="#1A1714",
+        )
+        .properties(padding={"left": 14, "right": 14, "top": 8, "bottom": 8})
     )
 
 
@@ -841,15 +865,15 @@ if result:
                 unsafe_allow_html=True,
             )
 
-        st.markdown('<div class="section">Valuation commentary</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="pull-quote">{result.get("valuation_notes") or "—"}</div>',
-            unsafe_allow_html=True,
-        )
+        val_notes = (result.get("valuation_notes") or "").strip()
+        if val_notes:
+            st.markdown('<div class="section">Valuation commentary</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="pull-quote">{val_notes}</div>', unsafe_allow_html=True)
 
-        if fins.get("summary"):
+        biz_summary = (fins.get("summary") or "").strip()
+        if biz_summary:
             st.markdown('<div class="section">Business summary</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="body">{fins["summary"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="body">{biz_summary}</div>', unsafe_allow_html=True)
 
     with right:
         st.markdown('<div class="section">Key risks</div>', unsafe_allow_html=True)
@@ -872,10 +896,12 @@ if result:
             f'<span class="sent sent-{sentiment}">Sentiment · {sentiment}</span>',
             unsafe_allow_html=True,
         )
-        st.markdown(
-            f'<div class="body" style="margin-top:10px;">{result.get("news_summary") or "—"}</div>',
-            unsafe_allow_html=True,
-        )
+        news_sum = (result.get("news_summary") or "").strip()
+        if news_sum:
+            st.markdown(
+                f'<div class="body" style="margin-top:10px;">{news_sum}</div>',
+                unsafe_allow_html=True,
+            )
 
         st.markdown(
             "<div class='chart-label' style='margin-top:18px;'>Recent headlines</div>",
@@ -886,10 +912,10 @@ if result:
             url = s.get("url") or "#"
             pub = s.get("publisher") or ""
             st.markdown(
-                f'<div class="news-card">'
-                f'<a href="{url}" target="_blank" rel="noopener">{title}</a>'
+                f'<a class="news-card" href="{url}" target="_blank" rel="noopener">'
+                f'<div class="news-title">{title}</div>'
                 f'<div class="news-pub">{pub}</div>'
-                f'<div class="news-cta">Read article →</div></div>',
+                f'<div class="news-cta">Read article →</div></a>',
                 unsafe_allow_html=True,
             )
 
@@ -918,9 +944,9 @@ if result:
                         f"{result.get('news_summary')}</div>", unsafe_allow_html=True)
             for s in (result.get("news_sources") or []):
                 st.markdown(
-                    f'<div class="news-card">'
-                    f'<a href="{s.get("url") or "#"}" target="_blank">{s.get("title", "")}</a>'
-                    f'<div class="news-pub">{s.get("publisher") or ""}</div></div>',
+                    f'<a class="news-card" href="{s.get("url") or "#"}" target="_blank" rel="noopener">'
+                    f'<div class="news-title">{s.get("title", "")}</div>'
+                    f'<div class="news-pub">{s.get("publisher") or ""}</div></a>',
                     unsafe_allow_html=True,
                 )
         with tabs[2]:
