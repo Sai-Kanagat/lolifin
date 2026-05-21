@@ -1,5 +1,5 @@
 """
-lolifin — Streamlit dashboard.
+Lolifin — Streamlit dashboard.
 
 Run: streamlit run app.py
 """
@@ -7,7 +7,7 @@ import streamlit as st
 from graph import graph
 
 st.set_page_config(
-    page_title="lolifin · Equity Research",
+    page_title="Lolifin · Equity Research",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -129,7 +129,7 @@ st.markdown(
     """
     <div class="brand-bar">
         <div>
-            <span class="brand-name">lolifin</span>
+            <span class="brand-name">Lolifin</span>
             <span class="brand-tag">  ·  Agentic Equity Research</span>
         </div>
         <div class="brand-credit">
@@ -372,7 +372,7 @@ else:
 st.divider()
 st.markdown(
     "<div style='text-align:center;color:#6b7280;font-size:0.78rem;padding:1rem 0;'>"
-    "© 2026 Iolanda Costa · lolifin · Built with LangGraph + Gemini"
+    "© 2026 Iolanda Costa · Lolifin · Built with LangGraph + Gemini"
     "</div>",
     unsafe_allow_html=True,
 )
