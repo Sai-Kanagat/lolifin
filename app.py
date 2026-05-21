@@ -70,7 +70,11 @@ html, body, .stApp { background: #F2E8DA !important; }
 .stApp { font-family: var(--sans); color: var(--ink); }
 #MainMenu, footer, header { visibility: hidden; }
 section[data-testid="stSidebar"] { display: none; }
-.main .block-container { padding-top: 0 !important; max-width: 1280px; }
+.main .block-container { padding-top: 0 !important; padding-bottom: 1rem !important; max-width: 1280px; }
+.stApp > header { display: none !important; }
+.stApp [data-testid="stHeader"] { display: none !important; height: 0 !important; }
+.stApp [data-testid="stToolbar"] { display: none !important; }
+[data-testid="stAppViewContainer"] > .main { padding-top: 0 !important; }
 
 .stApp p, .stApp li, .stApp span, .stApp div,
 .stMarkdown, .stMarkdown p, .stMarkdown li { color: var(--ink); font-family: var(--sans); }
@@ -79,21 +83,29 @@ h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
 }
 
 .masthead {
-  margin: -1rem -1rem 24px -1rem; padding: 20px 32px;
+  margin: -3rem -1rem 20px -1rem; padding: 14px 32px 16px 32px;
   background: var(--paper); border-bottom: 1px solid var(--rule-strong);
   display: flex; align-items: center; justify-content: space-between;
 }
-.masthead img { height: 56px; display: block; }
+.masthead img { height: 52px; display: block; }
 .masthead-right {
-  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  font-family: var(--sans); font-size: 12px; color: var(--ink-2);
   text-align: right; line-height: 1.55;
   background: var(--paper-card); border: 1px solid var(--rule-strong);
   border-radius: 4px; padding: 10px 14px;
 }
-.masthead-right b { color: var(--ink); font-weight: 700; }
+.masthead-right .credit-by {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--ink-3); font-weight: 500;
+}
+.masthead-right .credit-name {
+  font-family: var(--serif); font-size: 22px; font-style: italic;
+  color: var(--ink); font-weight: 400; line-height: 1.1; margin: 2px 0 4px 0;
+  letter-spacing: -0.01em;
+}
 .masthead-right .credit-meta {
-  color: var(--ink-2); font-size: 11px; margin-top: 2px;
-  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+  color: var(--ink-2); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
 }
 .tagline {
   font-family: var(--sans); font-size: 11px; color: var(--ink-2);
@@ -284,16 +296,41 @@ div[data-testid="stExpander"] {
   background: var(--paper-card); border: 1px solid var(--rule);
   border-radius: 4px; margin: 6px 0;
 }
-/* Only style the text — leave the chevron icon's font alone */
-div[data-testid="stExpander"] summary p,
-div[data-testid="stExpander"] summary span:not([data-testid*="Icon"]):not([class*="icon"]) {
+/* Nuke the broken material-icon text completely */
+div[data-testid="stExpander"] [data-testid="stExpanderToggleIcon"],
+div[data-testid="stExpander"] summary svg,
+div[data-testid="stExpander"] summary [class*="icon"] {
+  display: none !important;
+}
+/* Hide ANY element inside summary whose text content matches the icon names */
+div[data-testid="stExpander"] summary span {
+  font-size: 0 !important;
+}
+div[data-testid="stExpander"] summary span p,
+div[data-testid="stExpander"] summary span span:not(:empty) {
+  font-size: 13px !important;
+}
+/* Reset our font-size kill for actual content */
+div[data-testid="stExpander"] summary p {
   color: var(--ink) !important; font-family: var(--sans) !important;
   font-size: 13px !important; font-weight: 500 !important;
+  margin: 0 !important;
 }
-/* Hide the raw-text material icon names if they leak through */
-div[data-testid="stExpander"] [data-testid="stExpanderToggleIcon"] {
-  font-family: 'Material Symbols Rounded', 'Material Icons' !important;
-  color: var(--ink-2) !important;
+/* Draw our own chevron via ::before on the summary */
+div[data-testid="stExpander"] summary {
+  position: relative; padding-left: 28px !important;
+  list-style: none !important;
+}
+div[data-testid="stExpander"] summary::-webkit-details-marker { display: none; }
+div[data-testid="stExpander"] summary::before {
+  content: "›"; position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%) rotate(0deg);
+  color: var(--ink-2); font-family: var(--sans); font-size: 18px;
+  font-weight: 700; line-height: 1;
+  transition: transform 150ms ease;
+}
+div[data-testid="stExpander"] details[open] summary::before {
+  transform: translateY(-50%) rotate(90deg);
 }
 div[data-testid="stExpander"] details summary:hover { background: var(--paper-dim); }
 
@@ -389,7 +426,8 @@ st.markdown(
             <div class="tagline">Agentic equity research</div>
         </div>
         <div class="masthead-right">
-            A project by <b>Iolanda Costa</b>
+            <div class="credit-by">A project by</div>
+            <div class="credit-name">Iolanda Costa</div>
             <div class="credit-meta">M.Sc. Finance &amp; AI · Bologna Business School</div>
         </div>
     </div>
